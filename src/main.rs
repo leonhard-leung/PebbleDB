@@ -1,7 +1,12 @@
+use types::command::Command;
+use crate::database::{schema, record};
+
 mod cli;
 mod parser;
 mod database;
 mod storage;
+mod runtime;
+mod types;
 
 fn main() {
     println!("Welcome to PebbleDB");
@@ -14,12 +19,19 @@ fn main() {
             continue;
         }
 
-        let command = parser::parser::parse(&input);
+        let command = match parser::parser::parse(&input) {
+            Ok(command) => command,
+            Err(err) => {
+                println!("Error: {}", err);
+                continue;
+            }
+        };
 
-        if command.is_ok() {
-            database::engine::execute(command.unwrap());
-        } else {
-            println!("Error: {}", command.unwrap_err());
+        match command {
+            Command::Database(cmd) => schema::execute_database(cmd),
+            Command::Table(cmd) => schema::execute_table(cmd),
+            Command::Record(cmd) => record::execute(cmd),
+            Command::System(cmd) => runtime::execute(cmd),
         }
     }
 }

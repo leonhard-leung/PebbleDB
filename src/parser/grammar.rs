@@ -1,15 +1,6 @@
 use std::fmt;
 
 #[derive(Debug)]
-pub enum Action {
-    List(Target),
-    Create(Target, String),
-    Delete(Target, String),
-    Use(Target, String),
-    Exit,
-}
-
-#[derive(Debug)]
 pub enum Target {
     Database,
     Table,
