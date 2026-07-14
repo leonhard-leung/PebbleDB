@@ -3,14 +3,16 @@ mod parser;
 mod database;
 mod storage;
 
-use crate::parser::error::Error;
-
 fn main() {
     println!("Welcome to PebbleDB");
     println!();
 
     loop {
         let input = cli::shell::read_input();
+
+        if input.is_empty() {
+            continue;
+        }
 
         let command = parser::parser::parse(&input);
 

@@ -2,7 +2,10 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum Action {
+    List(Target),
     Create(Target, String),
+    Delete(Target, String),
+    Use(Target, String),
     Exit,
 }
 
@@ -10,6 +13,12 @@ pub enum Action {
 pub enum Target {
     Database,
     Table,
+}
+
+#[derive(Debug)]
+pub enum TargetForm {
+    Singular,
+    Plural,
 }
 
 impl fmt::Display for Target {
