@@ -1,12 +1,14 @@
+use crate::runtime::session::Session;
 use crate::types::command::{DatabaseCommand, TableCommand};
+use crate::storage;
 
 /// # Execute Database
-pub fn execute_database(command: DatabaseCommand) {
+pub fn execute_database(session:&mut Session , command: DatabaseCommand) {
     match command {
         DatabaseCommand::List => list_databases(),
         DatabaseCommand::Create(name) => create_database(&name),
         DatabaseCommand::Drop(name) => drop_database(&name),
-        DatabaseCommand::Use(name) => use_database(&name),
+        DatabaseCommand::Use(name) => use_database(&name, session),
     }
 }
 
@@ -26,22 +28,48 @@ pub fn execute_table(command: TableCommand) {
 
 /// # List Databases
 fn list_databases() {
-    println!("Showing databases...");
+    match storage::filesystem::list_databases() {
+        Ok(list) => {
+            for entry in list {
+                println!("{}", entry);
+            }
+        },
+        Err(err) => println!("Error listing databases: {}", err),
+    }
 }
 
 /// # Create Database
 fn create_database(name: &str) {
-    println!("Database created: {}", name);
+    match storage::filesystem::create_database(name) {
+        Ok(()) => println!("Database created: {}", name),
+        Err(err) => println!("Error creating database: {}", err),
+    }
 }
 
 /// # Drop Database
 fn drop_database(name: &str) {
-    println!("Database dropped: {}", name);
+    match storage::filesystem::drop_database(name) {
+        Ok(()) => println!("Database dropped: {}", name),
+        Err(err) => println!("Error dropping database: {}", err),
+    }
 }
 
 /// Use Database
-fn use_database(name: &str) {
-    println!("Database selected: {}", name);
+fn use_database(name: &str, session: &mut Session) {
+    if name == "none" {
+        session.current_database = None;
+        println!("No database selected")
+    }
+
+    match storage::filesystem::list_databases() {
+        Ok(list) => {
+            if list.iter().any(|db| db == name) {
+                session.current_database = Some(name.to_string());
+                println!("Database selected: {}", name);
+            }
+        },
+        Err(err) => println!("Error using database: {}", err),
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
