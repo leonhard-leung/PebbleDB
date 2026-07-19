@@ -1,11 +1,13 @@
 use std::fs;
 use crate::constants::system::ROOT;
-use crate::constants::format::{FILE_MAGIC_NUMBER, FILE_EXTENSION, FILE_FORMAT_VERSION, FILE_HEADER_SIZE, TABLE_MAGIC_NUMBER, TABLE_NAME_SIZE, COLUMN_NAME_SIZE, COLUMN_DATA_TYPE_SIZE, TABLE_COUNT_SIZE, COLUMN_DEFINITION_SIZE, TABLE_MAGIC_SIZE, ROW_COUNT_SIZE, FIRST_FREE_ROW_SIZE, COLUMN_COUNT_SIZE};
-use crate::constants::format::{DATABASE_HEADER_SIZE, TABLE_HEADER_SIZE, TABLE_BLOCK_SIZE};
+use crate::constants::format::{COLUMN_COUNT_SIZE, COLUMN_DEFINITION_SIZE, COLUMN_NAME_SIZE, FILE_EXTENSION, FILE_FORMAT_VERSION, FILE_HEADER_SIZE, FILE_MAGIC_NUMBER, FIRST_FREE_ROW_SIZE, ROW_COUNT_SIZE, TABLE_COUNT_SIZE, TABLE_MAGIC_NUMBER, TABLE_MAGIC_SIZE, TABLE_NAME_SIZE};
+use crate::constants::format::{DATABASE_HEADER_SIZE, TABLE_BLOCK_SIZE, TABLE_HEADER_SIZE};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use crate::database::model::Table;
+use crate::storage::navigation;
+use crate::storage::navigation::{move_to_database_header, move_to_nth_table_block};
 use crate::types::error::Error;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,6 +69,47 @@ pub fn drop_database(name: &str) -> Result<(), Error> {
 /// # TABLE SECTION
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+/// # List Tables
+pub fn list_tables(db_name: &str) -> Result<Vec<String>, Error> {
+    let mut tables: Vec<String> = Vec::new();
+
+    // open file
+    let path = create_path(db_name, FILE_EXTENSION);
+    let mut file = open_db_file(&path)?;
+
+    // obtain table count
+    let mut table_buffer = [0u8; TABLE_COUNT_SIZE];
+    move_to_database_header(&mut file)?;
+    file.read_exact(&mut table_buffer)?;
+    let table_count = u32::from_le_bytes(table_buffer);
+
+    // navigate to table block
+    let mut index = 0;
+    while tables.len() < table_count as usize {
+        move_to_nth_table_block(&mut file, index)?;
+
+        // get table magic number
+        let mut magic_buffer = [0u8; TABLE_MAGIC_SIZE];
+        file.read_exact(&mut magic_buffer)?;
+
+        // validate table magic number
+        if &magic_buffer == TABLE_MAGIC_NUMBER {
+            // obtain table name
+            let mut name_buffer = [0u8; TABLE_NAME_SIZE];
+            file.read_exact(&mut name_buffer)?;
+
+            // push to vector
+            (tables).push(String::from_utf8_lossy(&name_buffer).to_string());
+
+            index += 1;
+        } else {
+            index += 1;
+        }
+    }
+
+    Ok(tables)
+}
+
 /// # Create Table
 pub fn create_table(table: Table, db_name: &str) -> std::io::Result<()> {
     // open .pdb file
@@ -83,7 +126,7 @@ pub fn create_table(table: Table, db_name: &str) -> std::io::Result<()> {
 
     // TABLE HEADER: Table Magic Number, Table Name, Column Count, Row Count, First Free Row
     let first_free_table = find_first_free_table(&mut file)?;
-    file.seek(SeekFrom::Start(table_offset(first_free_table)))?;
+    file.seek(SeekFrom::Start(navigation::table_offset(first_free_table)))?;
 
     // table magic number
     file.write_all(TABLE_MAGIC_NUMBER)?;
@@ -203,10 +246,6 @@ fn find_first_free_table(file: &mut File) -> std::io::Result<u32> {
 fn seek_db_header(file: &mut File) -> std::io::Result<()> {
     file.seek(SeekFrom::Start(FILE_HEADER_SIZE as u64))?;
     Ok(())
-}
-
-fn table_offset(index: u32) -> u64 {
-    (FILE_HEADER_SIZE + DATABASE_HEADER_SIZE + (index as usize * TABLE_BLOCK_SIZE)) as u64
 }
 
 // DEV NOTES:

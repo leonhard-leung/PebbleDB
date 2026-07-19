@@ -43,7 +43,13 @@ pub fn execute_table(command: TableCommand, session:&mut Session) -> Result<(), 
     };
 
     match command {
-        TableCommand::List => list_tables(),
+        TableCommand::List => {
+            let tables = list_tables(db_name)?;
+
+            for table in tables {
+                cli::shell::print_out(&table);
+            }
+        },
         TableCommand::Create(name) => create_table(&name, &db_name),
         TableCommand::Drop(name) => drop_table(&name),
         TableCommand::Describe(name) => describe_table(&name),
@@ -62,14 +68,12 @@ fn list_databases() -> Result<Vec<String>, Error> {
 
 /// # Create Database
 fn create_database(name: &str) -> Result<(), Error> {
-    storage::filesystem::create_database(name)?;
-    Ok(())
+    storage::filesystem::create_database(name)
 }
 
 /// # Drop Database
 fn drop_database(name: &str) -> Result<(), Error> {
-    storage::filesystem::drop_database(name)?;
-    Ok(())
+    storage::filesystem::drop_database(name)
 }
 
 /// # Use Database
@@ -80,7 +84,6 @@ fn use_database(name: &str, session: &mut Session) -> Result<(), Error> {
     }
 
     let list = storage::filesystem::list_databases()?;
-
     if list.iter().any(| db | db.eq_ignore_ascii_case(name)) {
         session.current_database = Some(name.to_string());
     }
@@ -92,8 +95,8 @@ fn use_database(name: &str, session: &mut Session) -> Result<(), Error> {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// # List Tables
-fn list_tables() {
-    println!("Showing tables...");
+fn list_tables(db_name: &str) -> Result<Vec<String>, Error> {
+    storage::filesystem::list_tables(db_name)
 }
 
 /// # Create Table
