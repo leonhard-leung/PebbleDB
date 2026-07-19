@@ -6,14 +6,13 @@ use crate::types::error::Error;
 /// The main function used by the program. It maps the actions requested by the input
 /// to a respective helper function
 pub fn parse(input: &str) -> Result<Command, Error> {
-    let lowercase = input.to_lowercase();
-    let tokens: Vec<&str> = lowercase.split_whitespace().collect();
+    let tokens: Vec<&str> = input.split_whitespace().collect();
 
     let Some(&command) = tokens.get(0) else {
         return Err(Error::NoInput)
     };
 
-    match command {
+    match command.to_lowercase().as_str() {
         // common database and table command
         "list" => list_command(&tokens),
         "create" => create_command(&tokens),
@@ -205,7 +204,7 @@ fn validate_target(target_key: Option<&&str>, target_form: TargetForm) -> Result
         return Err(Error::MissingTarget(target_form))
     };
 
-    match (target_form, target_keyword) {
+    match (target_form, target_keyword.to_lowercase().as_str()) {
         (TargetForm::Singular, "database") => Ok(Target::Database),
         (TargetForm::Singular, "table") => Ok(Target::Table),
         (TargetForm::Plural, "databases") => Ok(Target::Database),

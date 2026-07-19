@@ -8,6 +8,7 @@ pub enum Error {
     MissingTargetName(Target),
     UnknownCommand(String),
     TooManyArguments(String),
+    NoSelectedDatabase,
     NoInput,
 }
 
@@ -23,6 +24,7 @@ impl fmt::Display for Error {
             Error::MissingTargetName(target) => write!(f, "missing {} name", target),
             Error::UnknownCommand(cmd) => write!(f, "unknown command '{}'", cmd),
             Error::TooManyArguments(cmd) => write!(f, "too many arguments: {}", cmd),
+            Error::NoSelectedDatabase => write!(f, "no selected database"),
             Error::NoInput => write!(f, "missing input"),
         }
     }
