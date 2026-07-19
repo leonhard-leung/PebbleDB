@@ -6,13 +6,14 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use crate::database::model::Table;
+use crate::types::error::Error;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /// # DATABASE SECTION
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// # List Databases
-pub fn list_databases() -> std::io::Result<Vec<String>> {
+pub fn list_databases() -> Result<Vec<String>, Error> {
     let mut databases: Vec<String> = Vec::new();
 
     // iterate through every file in the ROOT directory
@@ -32,7 +33,7 @@ pub fn list_databases() -> std::io::Result<Vec<String>> {
 }
 
 /// # Create Database
-pub fn create_database(name: &str) -> std::io::Result<()> {
+pub fn create_database(name: &str) -> Result<(), Error> {
     // create path
     let path = create_path(name, FILE_EXTENSION);
 
@@ -52,7 +53,7 @@ pub fn create_database(name: &str) -> std::io::Result<()> {
 }
 
 /// # Drop Database
-pub fn drop_database(name: &str) -> std::io::Result<()> {
+pub fn drop_database(name: &str) -> Result<(), Error> {
     // obtain database list
     let path = create_path(name, FILE_EXTENSION);
 

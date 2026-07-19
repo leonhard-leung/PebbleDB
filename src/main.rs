@@ -34,11 +34,16 @@ fn main() {
         };
 
         match command {
-            Command::Database(cmd) => schema::execute_database(cmd, &mut session),
+            Command::Database(cmd) => {
+                match schema::execute_database(cmd, &mut session) {
+                    Ok(_) => (),
+                    Err(err) => cli::shell::print_err(err),
+                }
+            },
             Command::Table(cmd) => {
                 match schema::execute_table(cmd, &mut session) {
                     Ok(_) => (),
-                    Err(err) => cli::shell::print_err(err)
+                    Err(err) => cli::shell::print_err(err),
                 }
             },
             Command::Record(cmd) => record::execute(cmd),

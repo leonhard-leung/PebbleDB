@@ -6,13 +6,34 @@ use crate::{cli, storage};
 use crate::types::error::Error;
 
 /// # Execute Database
-pub fn execute_database(command: DatabaseCommand, session:&mut Session , ) {
+pub fn execute_database(command: DatabaseCommand, session:&mut Session , ) -> Result<(), Error> {
     match command {
-        DatabaseCommand::List => list_databases(),
-        DatabaseCommand::Create(name) => create_database(&name),
-        DatabaseCommand::Drop(name) => drop_database(&name),
-        DatabaseCommand::Use(name) => use_database(&name, session),
+        DatabaseCommand::List => {
+            let databases = list_databases()?;
+
+            for db in databases {
+                cli::shell::print_out(&db);
+            }
+        },
+        DatabaseCommand::Create(name) => {
+            create_database(&name)?;
+            cli::shell::print_out(&format!("Database created: {}", name));
+        },
+        DatabaseCommand::Drop(name) => {
+            drop_database(&name)?;
+            cli::shell::print_out(&format!("Database dropped: {}", name));
+        },
+        DatabaseCommand::Use(name) => {
+            use_database(&name, session)?;
+
+            if name.eq_ignore_ascii_case("none") {
+                cli::shell::print_out("No database selected");
+            } else {
+                cli::shell::print_out(&format!("Database used: {}", name));
+            }
+        },
     }
+    Ok(())
 }
 
 /// # Execute Table
@@ -35,49 +56,35 @@ pub fn execute_table(command: TableCommand, session:&mut Session) -> Result<(), 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// # List Databases
-fn list_databases() {
-    match storage::filesystem::list_databases() {
-        Ok(list) => {
-            for entry in list {
-                println!("{}", entry);
-            }
-        },
-        Err(err) => println!("Error listing databases: {}", err),
-    }
+fn list_databases() -> Result<Vec<String>, Error> {
+    storage::filesystem::list_databases()
 }
 
 /// # Create Database
-fn create_database(name: &str) {
-    match storage::filesystem::create_database(name) {
-        Ok(()) => println!("Database created: {}", name),
-        Err(err) => println!("Error creating database: {}", err),
-    }
+fn create_database(name: &str) -> Result<(), Error> {
+    storage::filesystem::create_database(name)?;
+    Ok(())
 }
 
 /// # Drop Database
-fn drop_database(name: &str) {
-    match storage::filesystem::drop_database(name) {
-        Ok(()) => println!("Database dropped: {}", name),
-        Err(err) => println!("Error dropping database: {}", err),
-    }
+fn drop_database(name: &str) -> Result<(), Error> {
+    storage::filesystem::drop_database(name)?;
+    Ok(())
 }
 
-/// Use Database
-fn use_database(name: &str, session: &mut Session) {
+/// # Use Database
+fn use_database(name: &str, session: &mut Session) -> Result<(), Error> {
     if name == "none" {
         session.current_database = None;
-        println!("No database selected")
+
     }
 
-    match storage::filesystem::list_databases() {
-        Ok(list) => {
-            if list.iter().any(|db| db == name) {
-                session.current_database = Some(name.to_string());
-                println!("Database selected: {}", name);
-            }
-        },
-        Err(err) => println!("Error using database: {}", err),
+    let list = storage::filesystem::list_databases()?;
+
+    if list.iter().any(| db | db.eq_ignore_ascii_case(name)) {
+        session.current_database = Some(name.to_string());
     }
+    Ok(())
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

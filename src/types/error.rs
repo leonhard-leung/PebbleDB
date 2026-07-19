@@ -4,6 +4,7 @@ use crate::parser::grammar::TargetForm;
 
 #[derive(Debug)]
 pub enum Error {
+    Io(std::io::Error),
     MissingTarget(TargetForm),
     MissingTargetName(Target),
     UnknownCommand(String),
@@ -11,6 +12,33 @@ pub enum Error {
     NoSelectedDatabase,
     NoInput,
 }
+
+#[derive(Debug)]
+pub enum SystemError {
+
+}
+
+#[derive(Debug)]
+pub enum DatabaseError {
+    NoDatabaseSelected,
+}
+
+#[derive(Debug)]
+pub enum TableError {
+
+}
+
+#[derive(Debug)]
+pub enum RecordError {
+
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::Io(err)
+    }
+}
+
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -26,6 +54,15 @@ impl fmt::Display for Error {
             Error::TooManyArguments(cmd) => write!(f, "too many arguments: {}", cmd),
             Error::NoSelectedDatabase => write!(f, "no selected database"),
             Error::NoInput => write!(f, "missing input"),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl fmt::Display for DatabaseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DatabaseError::NoDatabaseSelected => write!(f, "No database selected, try \"use <name>\" first"),
         }
     }
 }
