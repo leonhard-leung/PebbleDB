@@ -5,7 +5,6 @@ use crate::runtime::session::Session;
 use crate::types::error::Error;
 
 pub fn cmd_prompt(session: &Session) -> String {
-    // print
     let prompt = match &session.current_database {
         Some(database) => format!("PebbleDB ({database}) > "),
         None => "PebbleDB > ".to_string(),

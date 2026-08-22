@@ -5,6 +5,7 @@ use crate::parser::grammar::TargetForm;
 #[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
+    Utf8(std::str::Utf8Error),
     MissingTarget(TargetForm),
     MissingTargetName(Target),
     UnknownCommand(String),
@@ -37,6 +38,10 @@ impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
         Error::Io(err)
     }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    fn from(err: std::str::Utf8Error) -> Error { Error::Utf8(err) }
 }
 
 

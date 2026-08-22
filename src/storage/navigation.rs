@@ -16,7 +16,3 @@ pub fn move_to_nth_table_block(file: &mut File, index: u32) -> Result<(), Error>
     file.seek(SeekFrom::Start(offset as u64))?;
     Ok(())
 }
-
-pub fn table_offset(index: u32) -> u64 {
-    (FILE_HEADER_SIZE + DATABASE_HEADER_SIZE + (index as usize * TABLE_BLOCK_SIZE)) as u64
-}
