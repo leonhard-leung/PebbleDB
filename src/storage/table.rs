@@ -1,4 +1,4 @@
-use crate::constants::format::{COLUMN_DEFINITION_OFFSET, COLUMN_NAME_SIZE, DATABASE_HEADER_OFFSET, DATABASE_HEADER_SIZE, FILE_EXTENSION, FILE_HEADER_SIZE, TABLE_BLOCK_SIZE, TABLE_BLOCK_START_OFFSET, TABLE_COUNT_SIZE, TABLE_EMPTY_MAGIC_NUMBER, TABLE_MAGIC_NUMBER, TABLE_MAGIC_NUMBER_SIZE, TABLE_NAME_SIZE};
+use crate::constants::format::{COLUMN_COUNT_SIZE, COLUMN_DEFINITION_OFFSET, COLUMN_DEFINITION_SIZE, COLUMN_NAME_SIZE, DATABASE_HEADER_OFFSET, DATABASE_HEADER_SIZE, FILE_EXTENSION, FILE_HEADER_SIZE, ROW_COUNT_SIZE, TABLE_BLOCK_SIZE, TABLE_BLOCK_START_OFFSET, TABLE_COUNT_SIZE, TABLE_EMPTY_MAGIC_NUMBER, TABLE_MAGIC_NUMBER, TABLE_MAGIC_NUMBER_SIZE, TABLE_NAME_SIZE};
 use crate::database::model::Table;
 use crate::storage::filesystem;
 use crate::types::error::Error;
@@ -94,7 +94,7 @@ pub fn create_table(table: Table, db_name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn drop_table(name: &str, db_name: &str) -> Result<(), Error> {
+pub fn drop_table(table_name: &str, db_name: &str) -> Result<(), Error> {
     // open .peb file
     let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
     let mut file = filesystem::open_file(&path)?;
@@ -116,7 +116,7 @@ pub fn drop_table(name: &str, db_name: &str) -> Result<(), Error> {
             let stored_name = std::str::from_utf8(&name_buffer)?
                 .trim_end_matches('\0');
 
-            if stored_name == name {
+            if stored_name == table_name {
                 // change magic number to empty magic number
                 filesystem::write_at(&mut file,
                          TABLE_BLOCK_START_OFFSET + (TABLE_BLOCK_SIZE * index) as u64,
@@ -138,19 +138,80 @@ pub fn drop_table(name: &str, db_name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn describe_table(table_name: &str, db_name: &str) -> std::io::Result<()> {
+pub fn describe_table(table_name: &str, db_name: &str) -> Result<Vec<String>, Error> {
     // open .peb file
     let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
     let mut file = filesystem::open_file(&path)?;
 
-    // search table
-    // move_to_database_header(&mut file)?;
-    // loop {
-    //     let mut buffer = [0u8; TABLE_MAGIC_SIZE];
-    //
-    // }
+    // vec to store data
+    let mut data: Vec<String> = Vec::new();
 
-    Ok(())
+    let mut index = 0;
+    loop {
+        // check if magic number is correct
+        let mut magic_buf = [0u8; TABLE_MAGIC_NUMBER_SIZE];
+        filesystem::read_at(&mut file,
+                            TABLE_BLOCK_START_OFFSET + (TABLE_BLOCK_SIZE * index) as u64,
+                            &mut magic_buf)?;
+
+        if &magic_buf == TABLE_MAGIC_NUMBER {
+            // check if name matches with the target
+            let mut name_buffer = [0u8; TABLE_NAME_SIZE];
+            filesystem::read(&mut file, &mut name_buffer)?;
+
+            let stored_name = std::str::from_utf8(&name_buffer)?
+                .trim_end_matches('\0');
+
+            if stored_name == table_name {
+                break;
+            }
+        }
+        index += 1;
+    }
+
+    // get table name
+    let mut table_name_buf = [0u8; TABLE_NAME_SIZE];
+    filesystem::read_at(&mut file,
+                        TABLE_BLOCK_START_OFFSET +
+                            (TABLE_BLOCK_SIZE * index) as u64 +
+                            TABLE_MAGIC_NUMBER_SIZE as u64,
+                        &mut table_name_buf)?;
+    let table_name = std::str::from_utf8(&table_name_buf)?
+        .trim_end_matches('\0');
+    data.push(table_name.to_string());
+
+    // get column count
+    let mut column_count_buf = [0u8; COLUMN_COUNT_SIZE];
+    filesystem::read(&mut file, &mut column_count_buf)?;
+    let column_count = u32::from_le_bytes(column_count_buf);
+    data.push(column_count.to_string());
+
+    // get record count
+    let mut record_count_buf = [0u8; ROW_COUNT_SIZE];
+    filesystem::read(&mut file, &mut record_count_buf)?;
+    let record_count = u32::from_le_bytes(record_count_buf);
+    data.push(record_count.to_string());
+
+    // get columns and data type
+    let mut column_def_buf = [0u8; COLUMN_DEFINITION_SIZE];
+    for i in 0..column_count {
+        filesystem::read_at(&mut file,
+                            COLUMN_DEFINITION_OFFSET +
+                                (TABLE_BLOCK_SIZE * index) as u64 +
+                                (COLUMN_DEFINITION_SIZE * i as usize) as u64
+                            , &mut column_def_buf)?;
+
+        let (name_buf, type_buf) = column_def_buf.split_at(16);
+
+        let column_name = std::str::from_utf8(name_buf)?
+            .trim_end_matches('\0');
+        data.push(column_name.to_string());
+
+        let column_type = u32::from_le_bytes(type_buf.try_into().unwrap());
+        data.push(column_type.to_string());
+
+    }
+    Ok(data)
 }
 
 // =================================================================================================

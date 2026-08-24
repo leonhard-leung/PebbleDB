@@ -107,7 +107,10 @@ pub fn execute_table(command: TableCommand, session:&mut Session) -> Result<(), 
             cli::shell::print_out(&format!("Table dropped: {}", &name));
         }
         TableCommand::Describe(name) => {
-            describe_table(&name)
+            let data = describe_table(&name, &db_name)?;
+            for contents in data {
+                cli::shell::print_out(&contents);
+            }
         },
     }
     Ok(())
@@ -166,6 +169,6 @@ fn drop_table(name: &str, db_name: &str) -> Result<(), Error> {
 }
 
 /// # Describe Table
-fn describe_table(name: &str) {
-    println!("Table description: {}", name);
+fn describe_table(name: &str, db_name: &str) -> Result<Vec<String>, Error> {
+    storage::table::describe_table(name, db_name)
 }
