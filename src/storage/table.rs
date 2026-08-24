@@ -1,39 +1,36 @@
-use crate::constants::format::{COLUMN_COUNT_SIZE, COLUMN_DEFINITION_OFFSET, COLUMN_DEFINITION_SIZE, COLUMN_NAME_SIZE, DATABASE_HEADER_OFFSET, DATABASE_HEADER_SIZE, FILE_EXTENSION, FILE_HEADER_SIZE, ROW_COUNT_SIZE, TABLE_BLOCK_SIZE, TABLE_BLOCK_START_OFFSET, TABLE_COUNT_SIZE, TABLE_EMPTY_MAGIC_NUMBER, TABLE_MAGIC_NUMBER, TABLE_MAGIC_NUMBER_SIZE, TABLE_NAME_SIZE};
+use crate::constants::format::{COLUMN_COUNT_SIZE, COLUMN_DEFINITION_OFFSET, COLUMN_DEFINITION_SIZE, COLUMN_NAME_SIZE, DATABASE_HEADER_OFFSET, DATABASE_HEADER_SIZE, DATABASE_MAGIC_NUMBER_OFFSET, DATABASE_MAGIC_NUMBER_SIZE, FILE_EXTENSION, FILE_HEADER_SIZE, ROW_COUNT_SIZE, TABLE_BLOCK_SIZE, TABLE_BLOCK_START_OFFSET, TABLE_COUNT_SIZE, TABLE_EMPTY_MAGIC_NUMBER, TABLE_MAGIC_NUMBER, TABLE_MAGIC_NUMBER_SIZE, TABLE_NAME_SIZE};
 use crate::database::model::Table;
 use crate::storage::filesystem;
 use crate::types::error::Error;
 use std::fs::File;
 
 /// # List Tables
-pub fn list_tables(db_name: &str) -> Result<Vec<String>, Error> {
-    let mut tables: Vec<String> = Vec::new();
-
+pub fn list_tables(
+    db_name: &str
+) -> Result<Vec<String>, Error> {
     // open file
     let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
     let mut file = filesystem::open_file(&path)?;
 
-    // obtain table count (located in database header)
-    let mut table_count_buf = [0u8; TABLE_COUNT_SIZE];
-    filesystem::read_at(&mut file, DATABASE_HEADER_OFFSET, &mut table_count_buf)?;
-    let table_count = u32::from_le_bytes(table_count_buf);
+    // vector for storing table names
+    let mut tables: Vec<String> = Vec::new();
+
+    // obtain table count
+    let table_count = read_table_count(&mut file)?;
 
     // navigate to table block
     let mut index = 0;
     while tables.len() < table_count as usize {
-        // get table magic number
-        let mut magic_buf = [0u8; TABLE_MAGIC_NUMBER_SIZE];
-        filesystem::read_at(&mut file,
-                TABLE_BLOCK_START_OFFSET + (TABLE_BLOCK_SIZE * index) as u64,
-                &mut magic_buf)?;
+        // obtain table magic number
+        let magic_number_buf = read_table_magic_number(&mut file, index)?;
 
-        // validate table magic number
-        if &magic_buf == TABLE_MAGIC_NUMBER {
+        // check if magic number is correct
+        if &magic_number_buf == TABLE_MAGIC_NUMBER {
             // obtain table name
-            let mut name_buf = [0u8; TABLE_NAME_SIZE];
-            filesystem::read(&mut file, &mut name_buf)?;
+            let table_name = read_table_name(&mut file, index)?;
 
             // push to vector
-            tables.push(String::from_utf8_lossy(&name_buf).to_string());
+            tables.push(table_name);
 
             index += 1;
         } else {
@@ -44,57 +41,66 @@ pub fn list_tables(db_name: &str) -> Result<Vec<String>, Error> {
 }
 
 /// # Create Table
-pub fn create_table(table: Table, db_name: &str) -> Result<(), Error> {
+pub fn create_table(
+    table: Table,
+    db_name: &str
+) -> Result<(), Error> {
+    // TODO: Check if the table name is already taken by another table, return a TABLE ALREADY EXIST ERROR
+
     // open .peb file
     let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
     let mut file = filesystem::open_file(&path)?;
 
-    // obtain table count (located in database header)
-    let mut table_count_buf = [0u8; TABLE_COUNT_SIZE];
-    filesystem::read_at(&mut file, DATABASE_HEADER_OFFSET, &mut table_count_buf)?;
-    let table_count = u32::from_le_bytes(table_count_buf);
+    // obtain table count
+    let table_count = read_table_count(&mut file)?;
 
     // write table magic number
-    let first_free_table = find_first_free_table(&mut file)?;
-    filesystem::write_at(&mut file,
-             TABLE_BLOCK_START_OFFSET
-                 + (TABLE_BLOCK_SIZE * first_free_table as usize) as u64,
-             TABLE_MAGIC_NUMBER)?;
+    let index = find_first_free_table(&mut file)?;
+    filesystem::write_at(
+        &mut file,
+        TABLE_BLOCK_START_OFFSET + (TABLE_BLOCK_SIZE * index) as u64,
+        TABLE_MAGIC_NUMBER,
+    )?;
 
     // table name
-    let name_buf = table.name.as_bytes();
-    filesystem::write(&mut file, name_buf)?;
-    filesystem::write_padding(&mut file, name_buf.len(), TABLE_NAME_SIZE)?;
+    let name_bytes = table.name.as_bytes();
+    let mut name_buf = [0u8; TABLE_NAME_SIZE];
+    name_buf[..name_bytes.len()].copy_from_slice(name_bytes);
+    filesystem::write(&mut file, &name_buf)?;
 
     // column count
-    let column_count = table.columns.len() as u32;
+    let column_count = table.columns.len() as u8;
     filesystem::write(&mut file, &column_count.to_le_bytes())?;
 
     // row count
     filesystem::write(&mut file, &0u32.to_le_bytes())?;
 
     // COLUMN DEFINITIONS: Column Name, Column Type
-    filesystem::move_file_cursor_at(&mut file,
-                        COLUMN_DEFINITION_OFFSET +
-                (TABLE_BLOCK_SIZE * first_free_table as usize) as u64)?;
-
     for col in table.columns {
         // column name
-        let col_name_buf = col.name.as_bytes();
-        filesystem::write(&mut file, col_name_buf)?;
-        filesystem::write_padding(&mut file, col_name_buf.len(), COLUMN_NAME_SIZE)?;
+        let col_name_bytes = col.name.as_bytes();
+        let mut col_name_buf = [0u8; COLUMN_NAME_SIZE];
+        col_name_buf[..col_name_bytes.len()].copy_from_slice(col_name_bytes);
+        filesystem::write(&mut file, &col_name_buf)?;
 
         // column type
         filesystem::write(&mut file, &col.data_type.id().to_le_bytes())?;
     }
 
     // update table number in the database header by adding plus 1 if successful
-    filesystem::write_at(&mut file, DATABASE_HEADER_OFFSET, &(table_count + 1).to_le_bytes())?;
+    filesystem::write_at(
+        &mut file,
+        DATABASE_HEADER_OFFSET + DATABASE_MAGIC_NUMBER_SIZE as u64,
+        &(table_count + 1).to_le_bytes()
+    )?;
 
     Ok(())
 }
 
-pub fn drop_table(table_name: &str, db_name: &str) -> Result<(), Error> {
+pub fn drop_table(
+    table_name: &str,
+    db_name: &str
+) -> Result<(), Error> {
     // open .peb file
     let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
     let mut file = filesystem::open_file(&path)?;
@@ -102,20 +108,15 @@ pub fn drop_table(table_name: &str, db_name: &str) -> Result<(), Error> {
     // loop through tables
     let mut index = 0;
     loop {
+        // obtain table magic number
+        let magic_number_buf = read_table_magic_number(&mut file, index)?;
+
         // check if magic number is correct
-        let mut magic_buf = [0u8; TABLE_MAGIC_NUMBER_SIZE];
-        filesystem::read_at(&mut file,
-                TABLE_BLOCK_START_OFFSET + (TABLE_BLOCK_SIZE * index) as u64,
-                &mut magic_buf)?;
+        if &magic_number_buf == TABLE_MAGIC_NUMBER {
+            // obtain table name
+            let stored_name = read_table_name(&mut file, index)?;
 
-        if &magic_buf == TABLE_MAGIC_NUMBER {
             // check if name matches with the target
-            let mut name_buffer = [0u8; TABLE_NAME_SIZE];
-            filesystem::read(&mut file, &mut name_buffer)?;
-
-            let stored_name = std::str::from_utf8(&name_buffer)?
-                .trim_end_matches('\0');
-
             if stored_name == table_name {
                 // change magic number to empty magic number
                 filesystem::write_at(&mut file,
@@ -123,12 +124,14 @@ pub fn drop_table(table_name: &str, db_name: &str) -> Result<(), Error> {
                          TABLE_EMPTY_MAGIC_NUMBER)?;
 
                 // get current table count
-                let mut table_count_buf = [0u8; TABLE_COUNT_SIZE];
-                filesystem::read_at(&mut file, DATABASE_HEADER_OFFSET, &mut table_count_buf)?;
-                let table_count = u32::from_le_bytes(table_count_buf);
+                let table_count = read_table_count(&mut file)?;
 
                 // update table count
-                filesystem::write_at(&mut file, DATABASE_HEADER_OFFSET, &(table_count - 1).to_le_bytes())?;
+                filesystem::write_at(
+                    &mut file,
+                    DATABASE_HEADER_OFFSET + DATABASE_MAGIC_NUMBER_SIZE as u64,
+                    &(table_count - 1).to_le_bytes()
+                )?;
 
                 break;
             }
@@ -138,7 +141,10 @@ pub fn drop_table(table_name: &str, db_name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn describe_table(table_name: &str, db_name: &str) -> Result<Vec<String>, Error> {
+pub fn describe_table(
+    table_name: &str,
+    db_name: &str
+) -> Result<Vec<String>, Error> {
     // open .peb file
     let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
     let mut file = filesystem::open_file(&path)?;
@@ -146,70 +152,34 @@ pub fn describe_table(table_name: &str, db_name: &str) -> Result<Vec<String>, Er
     // vec to store data
     let mut data: Vec<String> = Vec::new();
 
-    let mut index = 0;
-    loop {
-        // check if magic number is correct
-        let mut magic_buf = [0u8; TABLE_MAGIC_NUMBER_SIZE];
-        filesystem::read_at(&mut file,
-                            TABLE_BLOCK_START_OFFSET + (TABLE_BLOCK_SIZE * index) as u64,
-                            &mut magic_buf)?;
-
-        if &magic_buf == TABLE_MAGIC_NUMBER {
-            // check if name matches with the target
-            let mut name_buffer = [0u8; TABLE_NAME_SIZE];
-            filesystem::read(&mut file, &mut name_buffer)?;
-
-            let stored_name = std::str::from_utf8(&name_buffer)?
-                .trim_end_matches('\0');
-
-            if stored_name == table_name {
-                break;
-            }
-        }
-        index += 1;
-    }
+    // obtain table index
+    let index = get_table_index(&mut file, table_name)?;
 
     // get table name
-    let mut table_name_buf = [0u8; TABLE_NAME_SIZE];
-    filesystem::read_at(&mut file,
-                        TABLE_BLOCK_START_OFFSET +
-                            (TABLE_BLOCK_SIZE * index) as u64 +
-                            TABLE_MAGIC_NUMBER_SIZE as u64,
-                        &mut table_name_buf)?;
-    let table_name = std::str::from_utf8(&table_name_buf)?
-        .trim_end_matches('\0');
+    let table_name = read_table_name(&mut file, index)?;
     data.push(table_name.to_string());
 
     // get column count
-    let mut column_count_buf = [0u8; COLUMN_COUNT_SIZE];
-    filesystem::read(&mut file, &mut column_count_buf)?;
-    let column_count = u32::from_le_bytes(column_count_buf);
+    let column_count = read_column_count(&mut file, index)?;
     data.push(column_count.to_string());
 
     // get record count
-    let mut record_count_buf = [0u8; ROW_COUNT_SIZE];
-    filesystem::read(&mut file, &mut record_count_buf)?;
-    let record_count = u32::from_le_bytes(record_count_buf);
+    let record_count = read_row_count(&mut file, index)?;
     data.push(record_count.to_string());
 
     // get columns and data type
-    let mut column_def_buf = [0u8; COLUMN_DEFINITION_SIZE];
     for i in 0..column_count {
-        filesystem::read_at(&mut file,
-                            COLUMN_DEFINITION_OFFSET +
-                                (TABLE_BLOCK_SIZE * index) as u64 +
-                                (COLUMN_DEFINITION_SIZE * i as usize) as u64
-                            , &mut column_def_buf)?;
+        let offset = COLUMN_DEFINITION_OFFSET +
+            (TABLE_BLOCK_SIZE * index) as u64 +
+            (COLUMN_DEFINITION_SIZE * i as usize) as u64;
 
-        let (name_buf, type_buf) = column_def_buf.split_at(16);
+        let (column_name, column_type) = read_column_definition(
+            &mut file,
+            offset
+        )?;
 
-        let column_name = std::str::from_utf8(name_buf)?
-            .trim_end_matches('\0');
         data.push(column_name.to_string());
-
-        let column_type = u32::from_le_bytes(type_buf.try_into().unwrap());
         data.push(column_type.to_string());
-
     }
     Ok(data)
 }
@@ -217,7 +187,143 @@ pub fn describe_table(table_name: &str, db_name: &str) -> Result<Vec<String>, Er
 // =================================================================================================
 // Helper Function
 // =================================================================================================
-fn find_first_free_table(file: &mut File) -> std::io::Result<u32> {
+fn read_table_count(
+    file: &mut File
+) -> Result<u8, Error> {
+    let offset = DATABASE_MAGIC_NUMBER_OFFSET + DATABASE_MAGIC_NUMBER_SIZE as u64;
+
+    let mut buf = [0u8; TABLE_COUNT_SIZE];
+    filesystem::read_at(
+        file,
+        offset,
+        &mut buf
+    )?;
+
+    Ok(u8::from_le_bytes(buf))
+}
+
+fn read_table_magic_number(
+    file: &mut File,
+    index: usize
+) -> Result<[u8; TABLE_MAGIC_NUMBER_SIZE], Error> {
+    let offset = TABLE_BLOCK_START_OFFSET + (TABLE_BLOCK_SIZE * index) as u64;
+
+    let mut buf = [0u8; TABLE_MAGIC_NUMBER_SIZE];
+    filesystem::read_at(
+        file,
+        offset,
+        &mut buf
+    )?;
+
+    Ok(buf)
+}
+
+fn read_table_name(
+    file: &mut File,
+    index: usize
+) -> Result<String, Error> {
+    let offset = TABLE_BLOCK_START_OFFSET +
+        (TABLE_BLOCK_SIZE * index) as u64 +
+        TABLE_MAGIC_NUMBER_SIZE as u64;
+
+    let mut buf = [0u8; TABLE_NAME_SIZE];
+    filesystem::read_at(
+        file,
+        offset,
+        &mut buf
+    )?;
+
+    Ok(std::str::from_utf8(&buf)?.trim_end_matches('\0').to_owned())
+}
+
+fn read_column_count(
+    file: &mut File,
+    index: usize
+) -> Result<u8, Error> {
+    let offset = TABLE_BLOCK_START_OFFSET +
+        (TABLE_BLOCK_SIZE * index) as u64 +
+        TABLE_MAGIC_NUMBER_SIZE as u64 +
+        TABLE_NAME_SIZE as u64;
+
+    let mut buf = [0u8; COLUMN_COUNT_SIZE];
+    filesystem::read_at(
+        file,
+        offset,
+        &mut buf
+    )?;
+
+    Ok(u8::from_le_bytes(buf))
+}
+
+fn read_row_count(
+    file: &mut File,
+    index: usize
+) -> Result<u32, Error> {
+    let offset = TABLE_BLOCK_START_OFFSET +
+        (TABLE_BLOCK_SIZE * index) as u64 +
+        TABLE_MAGIC_NUMBER_SIZE as u64 +
+        TABLE_NAME_SIZE as u64 +
+        COLUMN_COUNT_SIZE as u64;
+
+    let mut buf = [0u8; ROW_COUNT_SIZE];
+    filesystem::read_at(
+       file,
+       offset,
+       &mut buf
+    )?;
+
+    Ok(u32::from_le_bytes(buf))
+}
+
+fn read_column_definition(
+    file: &mut File,
+    offset: u64
+) -> Result<(String, u8), Error> {
+    let mut buf = [0u8; COLUMN_DEFINITION_SIZE];
+
+    filesystem::read_at(
+        file,
+        offset,
+        &mut buf
+    )?;
+
+    let (name_buf, type_buf) = buf.split_at(COLUMN_NAME_SIZE);
+
+    let column_name = std::str::from_utf8(name_buf)?.trim_end_matches('\0');
+    let column_type = u8::from_le_bytes(type_buf.try_into().unwrap());
+
+    Ok((column_name.to_owned(), column_type))
+}
+
+fn get_table_index(
+    file: &mut File,
+    target: &str
+) -> Result<usize, Error> {
+    let mut index = 0;
+
+    loop {
+        // obtain magic number
+        let magic_number_buf = read_table_magic_number(file, index)?;
+
+        // check if magic number is correct
+        if &magic_number_buf == TABLE_MAGIC_NUMBER {
+            // obtain table name
+            let stored_name = read_table_name(file, index)?;
+
+            // check if acquired name matches target
+            if stored_name == target {
+                break;
+            }
+        }
+        index += 1;
+    }
+
+    Ok(index)
+}
+
+fn find_first_free_table(
+    file: &mut File
+) -> std::io::Result<usize> {
     let offset = FILE_HEADER_SIZE + DATABASE_HEADER_SIZE;
     filesystem::move_file_cursor_at(file, offset as u64)?;
 

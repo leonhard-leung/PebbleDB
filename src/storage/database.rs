@@ -1,7 +1,7 @@
 //! # Database
 //!
 
-use crate::constants::format::{DATABASE_HEADER_SIZE, FILE_EXTENSION, FILE_FORMAT_VERSION, FILE_HEADER_SIZE, FILE_MAGIC_NUMBER, TABLE_COUNT_SIZE};
+use crate::constants::format::{DATABASE_MAGIC_NUMBER, FILE_EXTENSION, FILE_FORMAT_VERSION, FILE_MAGIC_NUMBER};
 use crate::constants::system::ROOT;
 use crate::storage::filesystem;
 use crate::types::error::Error;
@@ -40,14 +40,13 @@ pub fn create_database(name: &str) -> Result<(), Error> {
     // create pdb file
     let mut file = File::create_new(path)?;
 
-    // HEADER: Magic Number, File Version
-    file.write_all(FILE_MAGIC_NUMBER)?;
-    file.write_all(&[FILE_FORMAT_VERSION])?;
-    filesystem::write_padding(&mut file, FILE_MAGIC_NUMBER.len() + 1, FILE_HEADER_SIZE)?;
+    // FILE HEADER: Magic Number, File Version
+    filesystem::write(&mut file, FILE_MAGIC_NUMBER)?;
+    filesystem::write(&mut file, &[FILE_FORMAT_VERSION])?;
 
-    // DATABASE METADATA: Table Count
-    file.write_all(&0u32.to_le_bytes())?;
-    filesystem::write_padding(&mut file, TABLE_COUNT_SIZE, DATABASE_HEADER_SIZE)?;
+    // DATABASE METADATA: Magic Number, Table Count
+    filesystem::write(&mut file, DATABASE_MAGIC_NUMBER)?;
+    filesystem::write(&mut file, &0u8.to_le_bytes())?;
 
     Ok(())
 }

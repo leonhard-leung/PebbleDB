@@ -24,7 +24,7 @@ pub enum DataType {
 }
 
 impl DataType {
-    pub fn id(&self) -> u32 {
+    pub fn id(&self) -> u8 {
         match self {
             DataType::Integer => 0,
             DataType::Float => 1,
