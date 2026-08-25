@@ -33,3 +33,11 @@ impl DataType {
         }
     }
 }
+
+
+pub enum Output {
+    Databases(Vec<String>),
+    Tables(Vec<String>),
+    TableMetadata(Vec<String>),
+    Message(String),
+}

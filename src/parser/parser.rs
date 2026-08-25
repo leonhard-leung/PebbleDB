@@ -1,9 +1,9 @@
 use crate::parser::grammar::{Target, TargetForm};
-use crate::types::command::{Command, DatabaseCommand, SystemCommand, TableCommand};
-use crate::types::error::Error;
+use crate::shared::command::{Command, DatabaseCommand, SystemCommand, TableCommand};
+use crate::shared::error::Error;
 
-/// # Parse
-/// The main function used by the program. It maps the actions requested by the input
+/// # parse
+/// Main function used by the program. It maps the actions requested by the input
 /// to a respective helper function
 pub fn parse(input: &str) -> Result<Command, Error> {
     let tokens: Vec<&str> = input.split_whitespace().collect();
@@ -38,9 +38,9 @@ pub fn parse(input: &str) -> Result<Command, Error> {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/// # COMMON DATABASE AND TABLE SECTION
-///////////////////////////////////////////////////////////////////////////////////////////////////
+// =================================================================================================
+// Common Database and Table Commands
+// =================================================================================================
 
 /// # List Command
 fn list_command(tokens: &[&str]) -> Result<Command, Error> {
@@ -103,9 +103,9 @@ fn drop_command(tokens: &[&str]) -> Result<Command, Error> {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/// # DATABASE SPECIFIC SECTION
-///////////////////////////////////////////////////////////////////////////////////////////////////
+// =================================================================================================
+// Database Specific Commands
+// =================================================================================================
 
 /// # Use Command
 fn use_command(tokens: &[&str]) -> Result<Command, Error> {
@@ -121,9 +121,9 @@ fn use_command(tokens: &[&str]) -> Result<Command, Error> {
     Ok(Command::Database(DatabaseCommand::Use(name.to_string())))
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/// # TABLE SPECIFIC SECTION
-///////////////////////////////////////////////////////////////////////////////////////////////////
+// =================================================================================================
+// Table Specific Commands
+// =================================================================================================
 
 /// # Describe Command
 fn describe_command(tokens: &[&str]) -> Result<Command, Error> {
@@ -139,9 +139,9 @@ fn describe_command(tokens: &[&str]) -> Result<Command, Error> {
     Ok(Command::Table(TableCommand::Describe(name.to_string())))
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/// # RECORD SPECIFIC SECTION
-///////////////////////////////////////////////////////////////////////////////////////////////////
+// =================================================================================================
+// Record Specific Commands
+// =================================================================================================
 
 /// # Add Command
 fn add_command() {
@@ -163,9 +163,9 @@ fn delete_command() {
     // TODO: work on this (7/14/2026)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/// # SYSTEM SPECIFIC SECTION
-///////////////////////////////////////////////////////////////////////////////////////////////////
+// =================================================================================================
+// System Specific Commands
+// =================================================================================================
 
 /// # Help Command
 fn help_command(tokens: &[&str]) -> Result<Command, Error> {
@@ -183,9 +183,9 @@ fn exit_command(tokens: &[&str]) -> Result<Command, Error> {
     Ok(Command::System(SystemCommand::Exit))
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/// # HELPER FUNCTIONS
-///////////////////////////////////////////////////////////////////////////////////////////////////
+// =================================================================================================
+// Helper Functions
+// =================================================================================================
 
 /// # Validate Token Count
 fn validate_token_count(tokens: &[&str], expected_len: usize) -> Result<(), Error> {

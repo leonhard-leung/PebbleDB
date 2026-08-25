@@ -1,4 +1,2 @@
-pub mod schema;
-pub mod record;
 pub mod model;
-mod api;
+pub mod api;

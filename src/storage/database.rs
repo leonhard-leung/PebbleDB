@@ -4,7 +4,7 @@
 use crate::constants::format::{DATABASE_MAGIC_NUMBER, FILE_EXTENSION, FILE_FORMAT_VERSION, FILE_MAGIC_NUMBER};
 use crate::constants::system::ROOT;
 use crate::storage::filesystem;
-use crate::types::error::Error;
+use crate::shared::error::Error;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -53,7 +53,7 @@ pub fn create_database(name: &str) -> Result<(), Error> {
 
 /// # Drop Database
 pub fn drop_database(name: &str) -> Result<(), Error> {
-    // obtain database list
+    // get database list
     let path = filesystem::create_file_path(name, FILE_EXTENSION);
 
     // remove database file

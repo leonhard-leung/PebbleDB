@@ -1,4 +1,4 @@
-use crate::types::command::SystemCommand;
+use crate::shared::command::SystemCommand;
 
 /// # Execute
 pub fn execute(command: SystemCommand) {

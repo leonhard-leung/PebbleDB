@@ -1,18 +1,21 @@
-use types::command::Command;
-use crate::database::{schema, record};
-use crate::runtime::{system};
+use crate::database::model::Output;
 use crate::runtime::session::Session;
+use crate::runtime::system;
+use application::executor;
+use shared::command::Command;
+use crate::shared::command::TableCommand;
 
 mod cli;
 mod parser;
 mod database;
 mod storage;
 mod runtime;
-mod types;
+mod shared;
 mod constants;
+pub mod application;
 
 fn main() {
-    cli::shell::print_out("Welcome to PebbleDB\n");
+    cli::shell::print_out(Output::Message("Welcome to PebbleDB!".to_string()));
     
     let mut session = Session {
         current_database: None,
@@ -35,18 +38,23 @@ fn main() {
 
         match command {
             Command::Database(cmd) => {
-                match schema::execute_database(cmd, &mut session) {
-                    Ok(_) => (),
+                match executor::execute_database(cmd, &mut session) {
+                    Ok(output) => cli::shell::print_out(output),
                     Err(err) => cli::shell::print_err(err),
                 }
             },
             Command::Table(cmd) => {
-                match schema::execute_table(cmd, &mut session) {
-                    Ok(_) => (),
+                match executor::execute_table(cmd, &mut session) {
+                    Ok(output) => cli::shell::print_out(output),
                     Err(err) => cli::shell::print_err(err),
                 }
             },
-            Command::Record(cmd) => record::execute(cmd),
+            Command::Record(cmd) => {
+                match executor::execute_record(cmd, &mut session) {
+                    Ok(output) => cli::shell::print_out(output),
+                    Err(err) => cli::shell::print_err(err),
+                }
+            },
             Command::System(cmd) => system::execute(cmd),
         }
     }
