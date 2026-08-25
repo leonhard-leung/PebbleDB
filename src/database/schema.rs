@@ -1,53 +1,60 @@
-use crate::database::model::{Column, DataType, Table};
+//! # Schema
+//! Provides the application-facing API for executing database and table commands.
+//! Handles command execution, session state, and validation before delegating database
+//! operations to the storage layer.
+
+use crate::database::api;
+use crate::database::model::{Column, DataType, Output, Table};
 use crate::runtime::session::Session;
 use crate::types::command::{DatabaseCommand, TableCommand};
 use crate::types::error::Error;
-use crate::{cli, storage};
+use crate::cli;
 
-/// # Execute Database
-pub fn execute_database(command: DatabaseCommand, session:&mut Session , ) -> Result<(), Error> {
+/// # execute_database
+/// Executes a database command and updates the session when required.
+pub fn execute_database(
+    command: DatabaseCommand, 
+    session:&mut Session
+) -> Result<Output, Error> {
     match command {
         DatabaseCommand::List => {
-            let databases = list_databases()?;
-
-            for db in databases {
-                cli::shell::print_out(&db);
-            }
+            let databases = api::list_databases()?;
+            Ok(Output::Databases(databases))
         },
         DatabaseCommand::Create(name) => {
-            create_database(&name)?;
-            cli::shell::print_out(&format!("Database created: {}", &name));
+            api::create_database(&name)?;
+            Ok(Output::Message(format!("Database created: {}", &name)))
         },
         DatabaseCommand::Drop(name) => {
-            drop_database(&name)?;
-            cli::shell::print_out(&format!("Database dropped: {}", &name));
+            api::drop_database(&name)?;
+            Ok(Output::Message(format!("Database dropped: {}", &name)))
         },
         DatabaseCommand::Use(name) => {
-            use_database(&name, session)?;
+            api::use_database(&name, session)?;
 
             if name.eq_ignore_ascii_case("none") {
-                cli::shell::print_out("No database selected");
+                Ok(Output::Message("Database deselected".to_string()))
             } else {
-                cli::shell::print_out(&format!("Database used: {}", &name));
+                Ok(Output::Message(format!("Database selected: {}", &name)))
             }
         },
     }
-    Ok(())
 }
 
-/// # Execute Table
-pub fn execute_table(command: TableCommand, session:&mut Session) -> Result<(), Error> {
+/// # execute_table
+/// Executes a table command within the database selected in the current session.
+pub fn execute_table(
+    command: TableCommand, 
+    session:&mut Session
+) -> Result<Output, Error> {
     let Some(db_name) = session.current_database.as_ref() else {
         return Err(Error::NoSelectedDatabase);
     };
 
     match command {
         TableCommand::List => {
-            let tables = list_tables(db_name)?;
-
-            for table in tables {
-                cli::shell::print_out(&table);
-            }
+            let tables = api::list_tables(db_name)?;
+            Ok(Output::Tables(tables))
         },
         TableCommand::Create(table_name) => {
             // column details
@@ -99,76 +106,16 @@ pub fn execute_table(command: TableCommand, session:&mut Session) -> Result<(), 
                 row_count: 0
             };
 
-            create_table(table, &db_name)?;
-            cli::shell::print_out(&format!("Table created: {}", &table_name));
+            api::create_table(table, &db_name)?;
+            Ok(Output::Message(format!("Table created: {}", &table_name)))
         },
         TableCommand::Drop(name) => {
-            drop_table(&name, &db_name)?;
-            cli::shell::print_out(&format!("Table dropped: {}", &name));
+            api::drop_table(&name, &db_name)?;
+            Ok(Output::Message(format!("Table dropped: {}", &name)))
         }
         TableCommand::Describe(name) => {
-            let data = describe_table(&name, &db_name)?;
-            for contents in data {
-                cli::shell::print_out(&contents);
-            }
+            let data = api::describe_table(&name, &db_name)?;
+            Ok(Output::TableMetadata(data))
         },
     }
-    Ok(())
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/// # DATABASE SECTION
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-/// # List Databases
-fn list_databases() -> Result<Vec<String>, Error> {
-    storage::database::list_databases()
-}
-
-/// # Create Database
-fn create_database(name: &str) -> Result<(), Error> {
-    storage::database::create_database(name)
-}
-
-/// # Drop Database
-fn drop_database(name: &str) -> Result<(), Error> {
-    storage::database::drop_database(name)
-}
-
-/// # Use Database
-fn use_database(name: &str, session: &mut Session) -> Result<(), Error> {
-    if name == "none" {
-        session.current_database = None;
-
-    }
-
-    let list = storage::database::list_databases()?;
-    if list.iter().any(| db | db.eq_ignore_ascii_case(name)) {
-        session.current_database = Some(name.to_string());
-    }
-    Ok(())
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/// # TABLE SECTION
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-/// # List Tables
-fn list_tables(db_name: &str) -> Result<Vec<String>, Error> {
-    storage::table::list_tables(db_name)
-}
-
-/// # Create Table
-fn create_table(table: Table, db_name: &str) -> Result<(), Error>{
-    storage::table::create_table(table, db_name)
-}
-
-/// # Drop Table
-fn drop_table(name: &str, db_name: &str) -> Result<(), Error> {
-    storage::table::drop_table(name, db_name)
-}
-
-/// # Describe Table
-fn describe_table(name: &str, db_name: &str) -> Result<Vec<String>, Error> {
-    storage::table::describe_table(name, db_name)
 }
