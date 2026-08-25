@@ -1,10 +1,14 @@
+//! # Table
+//! Provides operations for creating, listing, describing, and dropping tables.
+
 use crate::constants::format::{COLUMN_COUNT_SIZE, COLUMN_DEFINITION_OFFSET, COLUMN_DEFINITION_SIZE, COLUMN_NAME_SIZE, DATABASE_HEADER_OFFSET, DATABASE_HEADER_SIZE, DATABASE_MAGIC_NUMBER_OFFSET, DATABASE_MAGIC_NUMBER_SIZE, FILE_EXTENSION, FILE_HEADER_SIZE, ROW_COUNT_SIZE, TABLE_BLOCK_SIZE, TABLE_BLOCK_START_OFFSET, TABLE_COUNT_SIZE, TABLE_EMPTY_MAGIC_NUMBER, TABLE_MAGIC_NUMBER, TABLE_MAGIC_NUMBER_SIZE, TABLE_NAME_SIZE};
 use crate::database::model::Table;
 use crate::storage::filesystem;
 use crate::types::error::Error;
 use std::fs::File;
 
-/// # List Tables
+/// # list_tables
+/// Lists all active tables in the specified database.
 pub fn list_tables(
     db_name: &str
 ) -> Result<Vec<String>, Error> {
@@ -15,18 +19,18 @@ pub fn list_tables(
     // vector for storing table names
     let mut tables: Vec<String> = Vec::new();
 
-    // obtain table count
+    // get table count
     let table_count = read_table_count(&mut file)?;
 
     // navigate to table block
     let mut index = 0;
     while tables.len() < table_count as usize {
-        // obtain table magic number
+        // get table magic number
         let magic_number_buf = read_table_magic_number(&mut file, index)?;
 
         // check if magic number is correct
         if &magic_number_buf == TABLE_MAGIC_NUMBER {
-            // obtain table name
+            // get table name
             let table_name = read_table_name(&mut file, index)?;
 
             // push to vector
@@ -40,18 +44,18 @@ pub fn list_tables(
     Ok(tables)
 }
 
-/// # Create Table
+/// # create_table
+/// Creates a new table in the specified database and stores its metadata in the first
+/// available table block.
 pub fn create_table(
     table: Table,
     db_name: &str
 ) -> Result<(), Error> {
-    // TODO: Check if the table name is already taken by another table, return a TABLE ALREADY EXIST ERROR
-
     // open .peb file
     let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
     let mut file = filesystem::open_file(&path)?;
 
-    // obtain table count
+    // get table count
     let table_count = read_table_count(&mut file)?;
 
     // write table magic number
@@ -97,6 +101,9 @@ pub fn create_table(
     Ok(())
 }
 
+/// # drop_table
+/// Marks the specified table as inactive and removes it from the database's active
+/// table count.
 pub fn drop_table(
     table_name: &str,
     db_name: &str
@@ -108,12 +115,12 @@ pub fn drop_table(
     // loop through tables
     let mut index = 0;
     loop {
-        // obtain table magic number
+        // get table magic number
         let magic_number_buf = read_table_magic_number(&mut file, index)?;
 
         // check if magic number is correct
         if &magic_number_buf == TABLE_MAGIC_NUMBER {
-            // obtain table name
+            // get table name
             let stored_name = read_table_name(&mut file, index)?;
 
             // check if name matches with the target
@@ -141,6 +148,9 @@ pub fn drop_table(
     Ok(())
 }
 
+/// # describe_table
+/// Returns the metadata of the specified table, including its name, column count, row count,
+/// and column definitions.
 pub fn describe_table(
     table_name: &str,
     db_name: &str
@@ -302,12 +312,12 @@ fn get_table_index(
     let mut index = 0;
 
     loop {
-        // obtain magic number
+        // get magic number
         let magic_number_buf = read_table_magic_number(file, index)?;
 
         // check if magic number is correct
         if &magic_number_buf == TABLE_MAGIC_NUMBER {
-            // obtain table name
+            // get table name
             let stored_name = read_table_name(file, index)?;
 
             // check if acquired name matches target
