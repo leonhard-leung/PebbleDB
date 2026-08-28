@@ -1,9 +1,10 @@
-use std::io;
-pub use std::io::{BufRead};
-use std::io::Write;
-use crate::database::model::Output;
+use crate::cli::color::{CYAN, GREEN, RED, RESET};
 use crate::runtime::session::Session;
 use crate::shared::error::Error;
+use crate::shared::output::Output;
+use std::io;
+pub use std::io::BufRead;
+use std::io::Write;
 
 pub fn cmd_prompt(session: &Session) -> String {
     let prompt = match &session.current_database {
@@ -15,7 +16,7 @@ pub fn cmd_prompt(session: &Session) -> String {
 }
 
 pub fn read_input(prompt: &str) -> String {
-    print!("{}", prompt);
+    print!("{CYAN}{}{RESET}", prompt);
     io::stdout().flush().unwrap();
     
     let mut input = String::new();
@@ -26,25 +27,25 @@ pub fn read_input(prompt: &str) -> String {
 
 pub fn print_out(out: Output) {
     match out {
-        Output::Databases(dbs) => {
+        Output::DatabaseList(dbs) => {
             for db in dbs {
-                println!("{}", db);
+                println!("{CYAN}{db}{RESET}");
             }
         },
-        Output::Tables(tables) => {
+        Output::TablesList(tables) => {
             for table in tables {
-                println!("{}", table);
+                println!("{CYAN}{table}{RESET}");
             }
         },
         Output::TableMetadata(metadata) => {
             for line in metadata {
-                println!("{}", line);
+                println!("{CYAN}{line}{RESET}");
             }
         }
-        Output::Message(msg) => println!("{}", msg),
+        Output::Message(msg) => println!("{GREEN}{msg}{RESET}"),
     }
 }
 
 pub fn print_err(err: Error) {
-    println!("Error: {}", err)
+    println!("{RED}Error: {err}{RESET}");
 }

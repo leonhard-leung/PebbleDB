@@ -1,9 +1,9 @@
 use crate::cli;
 use crate::database::api;
-use crate::database::model::Output;
 use crate::runtime::session::Session;
 use crate::shared::command::{DatabaseCommand, RecordCommand, TableCommand};
 use crate::shared::error::Error;
+use crate::shared::output::Output;
 
 /// # execute_database
 /// Executes a database command and updates the session when required.
@@ -14,7 +14,7 @@ pub fn execute_database(
     match command {
         DatabaseCommand::List => {
             let databases = api::list_databases()?;
-            Ok(Output::Databases(databases))
+            Ok(Output::DatabaseList(databases))
         },
         DatabaseCommand::Create(name) => {
             api::create_database(&name)?;
@@ -49,7 +49,7 @@ pub fn execute_table(
     match command {
         TableCommand::List => {
             let tables = api::list_tables(db_name)?;
-            Ok(Output::Tables(tables))
+            Ok(Output::TablesList(tables))
         },
         TableCommand::Create(table_name) => {
             let table = cli::wizard::create_table_wizard(&table_name)?;

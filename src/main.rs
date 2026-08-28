@@ -1,9 +1,8 @@
-use crate::database::model::Output;
 use crate::runtime::session::Session;
 use crate::runtime::system;
 use application::executor;
 use shared::command::Command;
-use crate::shared::command::TableCommand;
+use shared::output::Output;
 
 mod cli;
 mod parser;

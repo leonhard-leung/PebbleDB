@@ -1,9 +1,7 @@
 use crate::database::model::Table;
 use crate::runtime::session::Session;
 use crate::storage;
-use crate::shared::error::{DatabaseError, Error};
-
-// TODO: ADD ALL VALIDATIONS IN THIS FILE
+use crate::shared::error::{DatabaseError, Error, TableError};
 
 // =================================================================================================
 // Database
@@ -20,6 +18,12 @@ pub fn list_databases() -> Result<Vec<String>, Error> {
 pub fn create_database(
     name: &str
 ) -> Result<(), Error> {
+    let list = storage::database::list_databases()?;
+
+    if list.iter().any(| db | db.eq_ignore_ascii_case(name)) {
+        return Err(Error::Database(DatabaseError::DatabaseAlreadyExists));
+    }
+
     storage::database::create_database(name)
 }
 
@@ -28,6 +32,12 @@ pub fn create_database(
 pub fn drop_database(
     name: &str
 ) -> Result<(), Error> {
+    let list = storage::database::list_databases()?;
+
+    if !list.iter().any(| db | db.eq_ignore_ascii_case(name)) {
+        return Err(Error::Database(DatabaseError::DatabaseNotFound));
+    }
+
     storage::database::drop_database(name)
 }
 
@@ -69,6 +79,12 @@ pub fn create_table(
     table: Table,
     db_name: &str
 ) -> Result<(), Error>{
+    let list = storage::table::list_tables(db_name)?;
+
+    if list.iter().any(| t | t.eq_ignore_ascii_case(&table.name)) {
+        return Err(Error::Table(TableError::TableAlreadyExists))
+    }
+
     storage::table::create_table(table, db_name)
 }
 
@@ -78,6 +94,12 @@ pub fn drop_table(
     name: &str,
     db_name: &str
 ) -> Result<(), Error> {
+    let list = storage::table::list_tables(db_name)?;
+
+    if !list.iter().any(| t | t.eq_ignore_ascii_case(name)) {
+        return Err(Error::Table(TableError::TableNotFound));
+    }
+
     storage::table::drop_table(name, db_name)
 }
 
@@ -87,5 +109,11 @@ pub fn describe_table(
     name: &str,
     db_name: &str
 ) -> Result<Vec<String>, Error> {
+    let list = storage::table::list_tables(db_name)?;
+
+    if !list.iter().any(| t | t.eq_ignore_ascii_case(name)) {
+        return Err(Error::Table(TableError::TableNotFound));
+    }
+
     storage::table::describe_table(name, db_name)
 }

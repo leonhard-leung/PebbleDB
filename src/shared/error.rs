@@ -34,6 +34,7 @@ pub enum DatabaseError {
 
 #[derive(Debug)]
 pub enum TableError {
+    TableNotFound,
     TableAlreadyExists,
 }
 
@@ -59,9 +60,9 @@ impl fmt::Display for Error {
             Error::TooManyArguments(cmd) => write!(f, "too many arguments: {}", cmd),
             Error::NoSelectedDatabase => write!(f, "no selected database"),
             Error::NoInput => write!(f, "missing input"),
-            Error::System(err) => write!(f, "system error: {}", err),
-            Error::Database(err) => write!(f, "database error: {}", err),
-            Error::Table(err) => write!(f, "table error: {}", err),
+            Error::System(err) => write!(f, "{}", err),
+            Error::Database(err) => write!(f, "{}", err),
+            Error::Table(err) => write!(f, "{}", err),
             _ => unreachable!(),
         }
     }
@@ -86,6 +87,7 @@ impl fmt::Display for DatabaseError {
 impl fmt::Display for TableError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            TableError::TableNotFound => write!(f, "Table not found"),
             TableError::TableAlreadyExists => write!(f, "Table already exists"),
         }
     }
