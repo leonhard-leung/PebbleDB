@@ -1,4 +1,4 @@
-use crate::cli::color::{CYAN, GREEN, RED, RESET};
+use crate::cli::format::{BOLD_FACE, CYAN, GREEN, RED, RESET, YELLOW};
 use crate::runtime::session::Session;
 use crate::shared::error::Error;
 use crate::shared::output::Output;
@@ -29,21 +29,32 @@ pub fn print_out(out: Output) {
     match out {
         Output::DatabaseList(dbs) => {
             for db in dbs {
-                println!("{CYAN}{db}{RESET}");
+                println!("{}", db);
             }
         },
         Output::TablesList(tables) => {
             for table in tables {
-                println!("{CYAN}{table}{RESET}");
+                println!("{}", table);
             }
         },
         Output::TableMetadata(metadata) => {
-            for line in metadata {
-                println!("{CYAN}{line}{RESET}");
+            println!("{BOLD_FACE}{} DETAILS{RESET}", metadata[0].to_uppercase());
+            println!("  Column Count: {CYAN}{}{RESET}", metadata[1]);
+            println!("  Record Count: {CYAN}{}{RESET}", metadata[2]);
+            println!("{BOLD_FACE}COLUMN DETAILS{RESET}");
+
+            for index in (3..metadata.len() - 1).step_by(2) {
+                println!("  {BOLD_FACE}Column {}{RESET}", (index - 2) / 2 + 1);
+                println!("    | Column Name: {CYAN}{}{RESET}", metadata[index], );
+                println!("    | Column Type: {CYAN}{}{RESET}", metadata[index + 1]);
             }
         }
         Output::Message(msg) => println!("{GREEN}{msg}{RESET}"),
     }
+}
+
+pub fn print_warning(warning: String) {
+    println!("{YELLOW}{warning}{RESET}");
 }
 
 pub fn print_err(err: Error) {

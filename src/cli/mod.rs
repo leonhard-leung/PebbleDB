@@ -1,3 +1,4 @@
 pub mod shell;
 pub mod wizard;
-pub mod color;
+mod format;
+mod syntax;

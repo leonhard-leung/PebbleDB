@@ -39,7 +39,7 @@ pub const ROW_COUNT_SIZE: usize = size_of::<u32>();
 pub const COLUMN_DEFINITION_SIZE: usize =
     COLUMN_NAME_SIZE + COLUMN_DATA_TYPE_SIZE;
 pub const COLUMN_NAME_SIZE: usize = 32;
-pub const COLUMN_DATA_TYPE_SIZE: usize = size_of::<u32>();
+pub const COLUMN_DATA_TYPE_SIZE: usize = size_of::<u8>();
 
 // =================================================================================================
 // Pointers

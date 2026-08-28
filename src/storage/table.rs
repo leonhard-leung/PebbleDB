@@ -321,7 +321,7 @@ fn get_table_index(
             let stored_name = read_table_name(file, index)?;
 
             // check if acquired name matches target
-            if stored_name == target {
+            if stored_name.eq_ignore_ascii_case(target) {
                 break;
             }
         }

@@ -9,6 +9,16 @@ pub fn create_table_wizard(table_name: &str) -> Result<Table, Error> {
         // column name
         let column_name = cli::shell::read_input("Column Name: ");
 
+        if column_name.is_empty() {
+            cli::shell::print_warning("Column name cannot be empty.".to_string());
+            continue;
+        } else if columns.iter().any(|col| col.name.eq_ignore_ascii_case(&column_name)) {
+            cli::shell::print_warning(format!("Column name already exists: {}", column_name.to_lowercase()));
+            continue;
+        }
+        
+        // TODO: CHANGE THIS, THE WIZARD SHOULD NOT BE ABLE TO CREATE DATATYPE AND COLUMN STRUCTS, JUST PURE STRINGS AND NUMBERS ARE ONLY ALLOWED
+
         // column data type
         let data_type: DataType;
         loop {

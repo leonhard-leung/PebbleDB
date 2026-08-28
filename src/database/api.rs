@@ -1,4 +1,4 @@
-use crate::database::model::Table;
+use crate::database::model::{Column, DataType, Table};
 use crate::runtime::session::Session;
 use crate::storage;
 use crate::shared::error::{DatabaseError, Error, TableError};
@@ -105,6 +105,12 @@ pub fn drop_table(
 
 /// # describe_table
 /// Retrieves the metadata of the specified table.
+///
+/// ## Format:
+/// - Index 0: Table Name
+/// - Index 1: Column Count
+/// - Index 2: Record Count
+/// - Index 3 to Metadata Length: Column Name and Column Type (converted to string)
 pub fn describe_table(
     name: &str,
     db_name: &str
@@ -115,5 +121,13 @@ pub fn describe_table(
         return Err(Error::Table(TableError::TableNotFound));
     }
 
-    storage::table::describe_table(name, db_name)
+    let mut metadata = storage::table::describe_table(name, db_name)?;
+
+    // update data type id and convert to string description
+    for index in (4..metadata.len()).step_by(2) {
+        let column_type = &metadata[index].parse::<u8>().unwrap();
+        metadata[index] = DataType::from_id(*column_type).to_string();
+    }
+
+    Ok(metadata)
 }
