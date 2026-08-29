@@ -1,3 +1,6 @@
+//! # Application Executor
+//! Handles CLI command execution by coordinating the CLI, database API, and session state.
+
 use crate::cli;
 use crate::database::api;
 use crate::runtime::session::Session;
@@ -52,8 +55,8 @@ pub fn execute_table(
             Ok(Output::TablesList(tables))
         },
         TableCommand::Create(table_name) => {
-            let table = cli::wizard::create_table_wizard(&table_name)?;
-            api::create_table(table, &db_name)?;
+            let data = cli::wizard::create_table_wizard(&table_name)?;
+            api::create_table(data, &db_name)?;
             Ok(Output::Message(format!("Table created: {}", &table_name)))
         },
         TableCommand::Drop(name) => {
@@ -67,6 +70,8 @@ pub fn execute_table(
     }
 }
 
+/// # execute_record
+/// Executes a record command within the database selected in the current session.
 pub fn execute_record(
     command: RecordCommand,
     session: &mut Session

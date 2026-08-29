@@ -1,3 +1,7 @@
+//! # Database API
+//! Provides the application-facing interface for database and table operations.
+//! Performs validation before delegating the persistence operations to the storage layer.
+
 use crate::database::model::{Column, DataType, Table};
 use crate::runtime::session::Session;
 use crate::storage;
@@ -76,14 +80,29 @@ pub fn list_tables(
 /// # create_table
 /// Creates a table through the storage layer.
 pub fn create_table(
-    table: Table,
+    data: Vec<String>,
     db_name: &str
 ) -> Result<(), Error>{
     let list = storage::table::list_tables(db_name)?;
 
-    if list.iter().any(| t | t.eq_ignore_ascii_case(&table.name)) {
+    if list.iter().any(| t | t.eq_ignore_ascii_case(&data[0])) {
         return Err(Error::Table(TableError::TableAlreadyExists))
     }
+
+    let mut columns: Vec<Column> = Vec::new();
+    for index in (1..data.len() - 1).step_by(2) {
+        let column = Column {
+            name: data[index].to_owned(),
+            data_type: DataType::from_str(&data[index + 1])
+        };
+        columns.push(column);
+    }
+
+    let table = Table {
+        name: data[0].to_owned(),
+        columns,
+        row_count: 0
+    };
 
     storage::table::create_table(table, db_name)
 }

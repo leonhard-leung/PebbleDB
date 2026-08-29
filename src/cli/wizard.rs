@@ -1,10 +1,18 @@
+//! # CLI Wizard
+//! Provides interactive prompts for collecting information required by CLI operations.
+
 use crate::cli;
-use crate::database::model::{Column, DataType, Table};
 use crate::shared::error::Error;
 
-pub fn create_table_wizard(table_name: &str) -> Result<Table, Error> {
-    // column details
-    let mut columns: Vec<Column> = Vec::new();
+/// # create_table_wizard
+/// Collects table and column information.
+///
+/// The returned vector contains the table name followed by pairs of column names and normalized
+/// data types.
+pub fn create_table_wizard(table_name: &str) -> Result<Vec<String>, Error> {
+    let mut data: Vec<String> = Vec::new();
+    data.push(table_name.to_string());
+
     loop {
         // column name
         let column_name = cli::shell::read_input("Column Name: ");
@@ -12,33 +20,25 @@ pub fn create_table_wizard(table_name: &str) -> Result<Table, Error> {
         if column_name.is_empty() {
             cli::shell::print_warning("Column name cannot be empty.".to_string());
             continue;
-        } else if columns.iter().any(|col| col.name.eq_ignore_ascii_case(&column_name)) {
+        } else if data.iter().any(|col| col.eq_ignore_ascii_case(&column_name)) {
             cli::shell::print_warning(format!("Column name already exists: {}", column_name.to_lowercase()));
             continue;
         }
-        
-        // TODO: CHANGE THIS, THE WIZARD SHOULD NOT BE ABLE TO CREATE DATATYPE AND COLUMN STRUCTS, JUST PURE STRINGS AND NUMBERS ARE ONLY ALLOWED
+        data.push(column_name);
 
         // column data type
-        let data_type: DataType;
+        let mut data_type = String::new();
         loop {
-            let input = cli::shell::read_input("Column Type: ");
-            match input.to_lowercase().as_str() {
-                "int" => data_type = DataType::Integer,
-                "float" => data_type = DataType::Float,
-                "boolean" => data_type = DataType::Boolean,
-                "text" => data_type = DataType::Text,
-                _ => continue,
+            let input = cli::shell::read_input("Column Type: ").to_lowercase();
+            
+            if cli::syntax::DATA_TYPES.contains(&input.as_str()) {
+                data_type =  input;
+                break;
             }
-            break
+            
+            cli::shell::print_warning(format!("Invalid data type: {}", input));
         }
-        
-        // push column to vector
-        let column = Column {
-            name: column_name,
-            data_type,
-        };
-        columns.push(column);
+        data.push(cli::syntax::normalize_data_type(&data_type).unwrap().to_string());
         
         // add another column
         let mut input: String;
@@ -53,12 +53,5 @@ pub fn create_table_wizard(table_name: &str) -> Result<Table, Error> {
         }
         break
     }
-    
-    let table = Table {
-        name: table_name.to_string(),
-        columns,
-        row_count: 0
-    };
-    
-    Ok(table)
+    Ok(data)
 }
