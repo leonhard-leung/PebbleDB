@@ -1,11 +1,13 @@
 use crate::parser::grammar::{Target, TargetForm};
-use crate::shared::command::{Command, DatabaseCommand, SystemCommand, TableCommand};
+use crate::shared::command::{Command, DatabaseCommand, RecordCommand, SystemCommand, TableCommand};
 use crate::shared::error::Error;
 
 /// # parse
 /// Main function used by the program. It maps the actions requested by the input
 /// to a respective helper function
-pub fn parse(input: &str) -> Result<Command, Error> {
+pub fn parse(
+    input: &str
+) -> Result<Command, Error> {
     let tokens: Vec<&str> = input.split_whitespace().collect();
 
     let Some(&command) = tokens.get(0) else {
@@ -18,14 +20,14 @@ pub fn parse(input: &str) -> Result<Command, Error> {
         "create" => create_command(&tokens),
         "drop" => drop_command(&tokens),
 
-        // database specific command
+        // database-specific command
         "use" => use_command(&tokens),
 
-        // table specific command
+        // table-specific command
         "describe" => describe_command(&tokens),
 
-        // record specific command TODO: work on this (7/14/2026)
-        // "add" => add_command(),
+        // record-specific command TODO: work on this (7/14/2026)
+        "add" => add_command(&tokens),
         // "select" => select_command(),
         // "update" => update_command(),
         // "delete" => delete_command(),
@@ -43,7 +45,9 @@ pub fn parse(input: &str) -> Result<Command, Error> {
 // =================================================================================================
 
 /// # List Command
-fn list_command(tokens: &[&str]) -> Result<Command, Error> {
+fn list_command(
+    tokens: &[&str]
+) -> Result<Command, Error> {
     // check if the number of tokens are correct
     validate_token_count(tokens, 2)?;
 
@@ -60,7 +64,9 @@ fn list_command(tokens: &[&str]) -> Result<Command, Error> {
 }
 
 /// # Create Command
-fn create_command(tokens: &[&str]) -> Result<Command, Error> {
+fn create_command(
+    tokens: &[&str]
+) -> Result<Command, Error> {
     // check if the number of tokens are correct
     validate_token_count(tokens, 3)?;
 
@@ -82,7 +88,9 @@ fn create_command(tokens: &[&str]) -> Result<Command, Error> {
 }
 
 /// # Drop Command
-fn drop_command(tokens: &[&str]) -> Result<Command, Error> {
+fn drop_command(
+    tokens: &[&str]
+) -> Result<Command, Error> {
     // check if the number of tokens are correct
     validate_token_count(tokens, 3)?;
 
@@ -108,7 +116,9 @@ fn drop_command(tokens: &[&str]) -> Result<Command, Error> {
 // =================================================================================================
 
 /// # Use Command
-fn use_command(tokens: &[&str]) -> Result<Command, Error> {
+fn use_command(
+    tokens: &[&str]
+) -> Result<Command, Error> {
     // check if the number of tokens are correct
     validate_token_count(tokens, 2)?;
 
@@ -126,7 +136,9 @@ fn use_command(tokens: &[&str]) -> Result<Command, Error> {
 // =================================================================================================
 
 /// # Describe Command
-fn describe_command(tokens: &[&str]) -> Result<Command, Error> {
+fn describe_command(
+    tokens: &[&str]
+) -> Result<Command, Error> {
     // check if the number of tokens are correct
     validate_token_count(tokens, 2)?;
 
@@ -144,8 +156,22 @@ fn describe_command(tokens: &[&str]) -> Result<Command, Error> {
 // =================================================================================================
 
 /// # Add Command
-fn add_command() {
-    // TODO: work on this (7/14/2026)
+fn add_command(
+    tokens: &[&str]
+) -> Result<Command, Error> {
+    // check if the number of tokens is correct
+    validate_token_count(tokens, 3)?;
+
+    // check if keyword token exists
+    let Some(&keyword) = tokens.get(1) else {
+        return Err(Error::NoInput)
+    };
+
+    let Some(&table_name) = tokens.get(2) else {
+        return Err(Error::NoInput)
+    };
+
+    Ok(Command::Record(RecordCommand::Insert(table_name.to_string())))
 }
 
 /// # Select Command

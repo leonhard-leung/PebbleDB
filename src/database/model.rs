@@ -45,6 +45,51 @@ impl DataType {
         }
     }
 
+    /// Returns the maximum length of the data type in bytes.
+    pub fn size(&self) -> usize {
+        match self {
+            DataType::Integer => 4,
+            DataType::Float => 4,
+            DataType::Boolean => 1,
+            DataType::Text => 255,
+        }
+    }
+
+    /// Validates the input string against the data type's constraints.
+    /// Returns a tuple containing a boolean indicating success and an error message.
+    pub fn validate(&self, input: &str) -> (bool, String) {
+        match self {
+            DataType::Integer => {
+                if input.parse::<i32>().is_ok() {
+                    (true, String::new())
+                } else {
+                    (false, "Invalid integer value".to_string())
+                }
+            },
+            DataType::Float => {
+                if input.parse::<f32>().is_ok() {
+                    (true, String::new())
+                } else {
+                    (false, "Invalid float value".to_string())
+                }
+            },
+            DataType::Boolean => {
+                if input.parse::<bool>().is_ok() {
+                    (true, String::new())
+                } else {
+                    (false, "Invalid boolean value".to_string())
+                }
+            },
+            DataType::Text => {
+                if input.len() <= self.size() {
+                    (true, String::new())
+                } else {
+                    (false, "Text value exceeds maximum length".to_string())
+                }
+            },
+        }
+    }
+
     /// Converts a data type identifier to its corresponding DataType enum value.
     pub fn from_id(id: u8) -> DataType {
         match id {
@@ -77,4 +122,14 @@ impl fmt::Display for DataType {
             DataType::Text => write!(f, "Text"),
         }
     }
+}
+
+// =================================================================================================
+// Record Model
+// =================================================================================================
+
+/// Represents a single record in a table with its data and payload size.
+pub struct Record {
+    pub data: Vec<String>,
+    pub payload_size: usize,
 }

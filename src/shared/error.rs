@@ -12,6 +12,7 @@ pub enum Error {
     System(SystemError),
     Database(DatabaseError),
     Table(TableError),
+    Record(RecordError),
     MissingTarget(TargetForm),
     MissingTargetName(Target),
     UnknownCommand(String),
@@ -40,7 +41,8 @@ pub enum TableError {
 
 #[derive(Debug)]
 pub enum RecordError {
-
+    InvalidRecord(String),
+    RecordLengthMismatch,
 }
 
 // =================================================================================================
@@ -63,6 +65,7 @@ impl fmt::Display for Error {
             Error::System(err) => write!(f, "{}", err),
             Error::Database(err) => write!(f, "{}", err),
             Error::Table(err) => write!(f, "{}", err),
+            Error::Record(err) => write!(f, "{}", err),
             _ => unreachable!(),
         }
     }
@@ -89,6 +92,15 @@ impl fmt::Display for TableError {
         match self {
             TableError::TableNotFound => write!(f, "Table not found"),
             TableError::TableAlreadyExists => write!(f, "Table already exists"),
+        }
+    }
+}
+
+impl fmt::Display for RecordError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RecordError::InvalidRecord(err) => write!(f, "Invalid record\n{}", err),
+            RecordError::RecordLengthMismatch => write!(f, " record values does not match column count"),
         }
     }
 }

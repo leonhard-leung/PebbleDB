@@ -25,7 +25,7 @@ pub enum TableCommand {
 #[derive(Debug)]
 pub enum RecordCommand {
     Select,
-    Insert,
+    Insert(String),
     Update,
     Delete,
 }

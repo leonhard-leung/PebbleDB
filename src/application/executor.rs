@@ -76,5 +76,25 @@ pub fn execute_record(
     command: RecordCommand,
     session: &mut Session
 ) -> Result<Output, Error> {
-    Ok(Output::Message("Record Command".to_string()))
+    let Some(db_name) = session.current_database.as_ref() else {
+        return Err(Error::NoSelectedDatabase);
+    };
+    
+    match command {
+        RecordCommand::Insert(table_name) => {
+            let metadata = api::describe_table(&table_name, &db_name)?;
+            let columns = metadata
+                .iter()
+                .skip(3)
+                .step_by(2)
+                .cloned()
+                .collect::<Vec<String>>();
+            
+            let data = cli::wizard::insert_record_wizard(columns)?;
+            api::insert_record(data, &table_name, &db_name)?;
+            
+            Ok(Output::Message("Insert Command".to_string()))
+        },
+        _ => Ok(Output::Message("Record Command".to_string()))
+    }
 }

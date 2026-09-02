@@ -162,7 +162,7 @@ pub fn describe_table(
     // vec to store data
     let mut data: Vec<String> = Vec::new();
 
-    // obtain table index
+    // get table index
     let index = get_table_index(&mut file, table_name)?;
 
     // get table name
@@ -192,6 +192,41 @@ pub fn describe_table(
         data.push(column_type.to_string());
     }
     Ok(data)
+}
+
+pub fn get_table_columns(
+    table_name: &str,
+    db_name: &str
+) -> Result<Vec<(String, u8)>, Error> {
+    // open .peb file
+    let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
+    let mut file = filesystem::open_file(&path)?;
+    
+    // get table index
+    let index = get_table_index(&mut file, table_name)?;
+    
+    // get column count
+    let column_count = read_column_count(&mut file, index)?;
+    
+    // vec to store data
+    let mut columns: Vec<(String, u8)> = Vec::new();
+
+    for i in 0..column_count {
+        let offset = COLUMN_DEFINITION_OFFSET +
+            (TABLE_BLOCK_SIZE * index) as u64 +
+            (COLUMN_DEFINITION_SIZE * i as usize) as u64;
+
+        let (column_name, data_type_id) = read_column_definition(
+            &mut file,
+            offset
+        )?;
+        
+        columns.push((
+            column_name,
+            data_type_id
+        ));
+    }
+    Ok(columns)
 }
 
 // =================================================================================================
@@ -300,9 +335,9 @@ fn read_column_definition(
     let (name_buf, type_buf) = buf.split_at(COLUMN_NAME_SIZE);
 
     let column_name = std::str::from_utf8(name_buf)?.trim_end_matches('\0');
-    let column_type = u8::from_le_bytes(type_buf.try_into().unwrap());
+    let data_type_id = u8::from_le_bytes(type_buf.try_into().unwrap());
 
-    Ok((column_name.to_owned(), column_type))
+    Ok((column_name.to_owned(), data_type_id))
 }
 
 fn get_table_index(

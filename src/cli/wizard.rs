@@ -9,7 +9,9 @@ use crate::shared::error::Error;
 ///
 /// The returned vector contains the table name followed by pairs of column names and normalized
 /// data types.
-pub fn create_table_wizard(table_name: &str) -> Result<Vec<String>, Error> {
+pub fn create_table_wizard(
+    table_name: &str
+) -> Result<Vec<String>, Error> {
     let mut data: Vec<String> = Vec::new();
     data.push(table_name.to_string());
 
@@ -53,5 +55,32 @@ pub fn create_table_wizard(table_name: &str) -> Result<Vec<String>, Error> {
         }
         break
     }
+    Ok(data)
+}
+
+
+/// # insert_record_wizard
+/// Collects column data information.
+///
+/// The returned vector contains the entries of every column in order.
+pub fn insert_record_wizard(
+    columns: Vec<String>
+) -> Result<Vec<String>, Error> {
+    let mut data: Vec<String> = Vec::new();
+
+    for column in columns {
+        loop {
+            let input = cli::shell::read_input(format!("{}: ", column).as_str());
+
+            if input.is_empty() {
+                cli::shell::print_warning("Input cannot be empty.".to_string());
+                continue;
+            }
+
+            data.push(input);
+            break;
+        }
+    }
+
     Ok(data)
 }

@@ -9,6 +9,8 @@ pub const FILE_MAGIC_NUMBER: &[u8; 4] = b"PBDB";
 pub const DATABASE_MAGIC_NUMBER: &[u8; 4] = b"DBMG";
 pub const TABLE_MAGIC_NUMBER: &[u8; 4] = b"TBL1";
 pub const TABLE_EMPTY_MAGIC_NUMBER: &[u8; 4] = b"TBL0";
+pub const RECORD_MAGIC_NUMBER: &[u8; 4] = b"REC1";
+pub const RECORD_EMPTY_MAGIC_NUMBER: &[u8; 4] = b"REC0";
 
 // =================================================================================================
 // Sizes
@@ -41,6 +43,10 @@ pub const COLUMN_DEFINITION_SIZE: usize =
 pub const COLUMN_NAME_SIZE: usize = 32;
 pub const COLUMN_DATA_TYPE_SIZE: usize = size_of::<u8>();
 
+// Record
+pub const RECORD_MAGIC_NUMBER_SIZE: usize = RECORD_MAGIC_NUMBER.len();
+pub const RECORD_LENGTH_SIZE: usize = size_of::<u32>();
+
 // =================================================================================================
 // Pointers
 // =================================================================================================
@@ -54,11 +60,3 @@ pub const TABLE_BLOCK_START_OFFSET: u64 =
     (FILE_HEADER_SIZE + DATABASE_HEADER_SIZE) as u64;
 pub const COLUMN_DEFINITION_OFFSET: u64 =
     TABLE_BLOCK_START_OFFSET + TABLE_HEADER_SIZE as u64;
-
-// =================================================================================================
-// Data type size
-// =================================================================================================
-pub const INT_SIZE: usize = 4;
-pub const FLOAT_SIZE: usize = 4;
-pub const BOOLEAN_SIZE: usize = 1;
-pub const TEXT_SIZE: usize = 255;
