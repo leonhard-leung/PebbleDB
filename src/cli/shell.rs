@@ -48,6 +48,13 @@ pub fn print_out(out: Output) {
                 println!("    | Column Name: {CYAN}{}{RESET}", metadata[index], );
                 println!("    | Column Type: {CYAN}{}{RESET}", metadata[index + 1]);
             }
+        },
+        Output::Record(record) => {
+            println!("{BOLD_FACE}RECORD DETAILS{RESET}");
+            for (value, column) in record.iter() {
+                print!("  | {BOLD_FACE}{}{RESET}", column);
+                println!(": {CYAN}{}{RESET}", value);
+            }
         }
         Output::Message(msg) => println!("{GREEN}{msg}{RESET}"),
     }

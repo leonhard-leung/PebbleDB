@@ -2,7 +2,7 @@
 //! Provides the application-facing interface for database and table operations.
 //! Performs validation before delegating the persistence operations to the storage layer.
 
-use crate::database::model::{Column, DataType, Record, Table};
+use crate::database::model::{Column, DataType, Record, SerializedRecord, Table};
 use crate::runtime::session::Session;
 use crate::storage;
 use crate::shared::error::{DatabaseError, Error, RecordError, TableError};
@@ -173,6 +173,11 @@ pub fn insert_record(
         return Err(Error::Record(RecordError::RecordLengthMismatch))
     }
 
+    let cols = columns
+        .iter()
+        .map(|(name, id)| Column{ name: name.clone(), data_type: DataType::from_id(*id)})
+        .collect::<Vec<Column>>();
+
     let mut error_message = String::new();
     for (index, (_, data_type_id)) in columns.iter().enumerate() {
         let data_type = DataType::from_id(*data_type_id);
@@ -191,10 +196,36 @@ pub fn insert_record(
         return Err(Error::Record(RecordError::InvalidRecord(error_message)))
     }
 
-    let record = Record {
+    let record = Record { data, columns: cols };
+
+    storage::record::insert_record(record.serialize()?, table_name, db_name)
+}
+
+pub fn select_record(
+    id: u32,
+    table_name: &str,
+    db_name: &str
+) -> Result<Record, Error> {
+    let list = storage::table::list_tables(db_name)?;
+
+    if !list.iter().any(| t | t.eq_ignore_ascii_case(table_name)) {
+        return Err(Error::Table(TableError::TableNotFound));
+    }
+
+    let columns = storage::table::get_table_columns(table_name, db_name)?;
+    let payload_size = columns.iter().map(| n | DataType::from_id(n.1).size()).sum::<usize>();
+
+    let data = storage::record::read_record(
+        id,
+        payload_size,
+        table_name,
+        db_name
+    )?;
+
+    let serialized = SerializedRecord {
         data,
-        payload_size: columns.iter().map(|n| DataType::from_id(n.1).size()).sum()
+        payload_size
     };
 
-    storage::record::insert_record(record, table_name, db_name)
+    Ok(serialized.deserialize(&columns)?)
 }

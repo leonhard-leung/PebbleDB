@@ -24,10 +24,10 @@ pub enum TableCommand {
 
 #[derive(Debug)]
 pub enum RecordCommand {
-    Select,
+    Select(String, u32),
     Insert(String),
-    Update,
-    Delete,
+    Update(String, u32),
+    Delete(String, u32),
 }
 
 #[derive(Debug)]

@@ -92,9 +92,20 @@ pub fn execute_record(
             
             let data = cli::wizard::insert_record_wizard(columns)?;
             api::insert_record(data, &table_name, &db_name)?;
-            
-            Ok(Output::Message("Insert Command".to_string()))
+
+            Ok(Output::Message("Record added".to_string()))
         },
+        RecordCommand::Select(table_name, id) => {
+            let record = api::select_record(id, &table_name, &db_name)?;
+            
+            let output: Vec<(String, String)> = record
+                .data
+                .into_iter()
+                .zip(record.columns.into_iter().map(|col| col.name))
+                .collect();
+
+            Ok(Output::Record(output))
+        }
         _ => Ok(Output::Message("Record Command".to_string()))
     }
 }

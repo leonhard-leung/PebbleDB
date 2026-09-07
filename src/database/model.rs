@@ -3,7 +3,7 @@
 //! and their columns.
 
 use std::fmt;
-
+use crate::shared::error::Error;
 // =================================================================================================
 // Table Model
 // =================================================================================================
@@ -128,8 +128,108 @@ impl fmt::Display for DataType {
 // Record Model
 // =================================================================================================
 
-/// Represents a single record in a table with its data and payload size.
+/// Represents a single record in a table with its data and columns.
 pub struct Record {
     pub data: Vec<String>,
-    pub payload_size: usize,
+    pub columns: Vec<Column>,
+}
+
+pub struct SerializedRecord {
+    pub data: Vec<u8>,
+    pub payload_size: usize
+}
+
+impl Record {
+    pub fn serialize(
+        &self
+    ) -> Result<SerializedRecord, Error> {
+        let mut serialized = Vec::new();
+
+        for (entry, column) in self.data.iter().zip(self.columns.iter()) {
+            
+            match column.data_type {
+                DataType::Integer => {
+                    let value = entry.parse::<i32>()?;
+                    serialized.extend_from_slice(&value.to_le_bytes());
+                },
+                DataType::Float => {
+                    let value = entry.parse::<f32>()?;
+                    serialized.extend_from_slice(&value.to_le_bytes());
+                },
+                DataType::Boolean => {
+                    let value = entry.parse::<bool>()?;
+                    serialized.push(value as u8);
+                },
+                DataType::Text => {
+                    let mut buffer = vec![0u8; DataType::Text.size()];
+                    let bytes = entry.as_bytes();
+
+                    buffer[..bytes.len()].copy_from_slice(bytes);
+
+                    serialized.extend_from_slice(&buffer);
+                },
+            }
+        }
+
+        let payload_size = serialized.len();
+
+        Ok(SerializedRecord {
+            data: serialized,
+            payload_size
+        })
+    }
+}
+
+impl SerializedRecord {
+    pub fn deserialize(
+        &self,
+        columns: &[(String, u8)]
+    ) -> Result<Record, Error> {
+        let mut deserialized = Vec::new();
+        let mut offset = 0;
+        let mut cols: Vec<Column> = Vec::new();
+
+        for (column_name, data_type_id) in columns.iter() {
+            let data_type = DataType::from_id(*data_type_id);
+            
+            cols.push(Column{
+                name: column_name.to_owned(),
+                data_type: DataType::from_id(*data_type_id)
+            });
+
+            match data_type {
+                DataType::Integer => {
+                    let bytes = &self.data[offset..offset + DataType::Integer.size()];
+                    let value = i32::from_le_bytes(bytes.try_into().unwrap());
+
+                    deserialized.push(value.to_string());
+                    offset += DataType::Integer.size();
+                },
+                DataType::Float => {
+                    let bytes = &self.data[offset..offset + DataType::Float.size()];
+                    let value = f32::from_le_bytes(bytes.try_into().unwrap());
+
+                    deserialized.push(value.to_string());
+                    offset += DataType::Float.size();
+                },
+                DataType::Boolean => {
+                    let value = self.data[offset] != 0;
+
+                    deserialized.push(value.to_string());
+                    offset += DataType::Boolean.size();
+                },
+                DataType::Text => {
+                    let bytes = &self.data[offset..offset + DataType::Text.size()];
+                    let value = std::str::from_utf8(&bytes)?.trim_end_matches('\0');
+                    
+                    deserialized.push(value.to_string());
+                    offset += DataType::Text.size();
+                },
+            }
+        }
+        Ok(Record { 
+            data: deserialized,
+            columns: cols
+        })
+    }
 }
