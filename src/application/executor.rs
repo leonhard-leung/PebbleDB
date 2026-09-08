@@ -105,6 +105,17 @@ pub fn execute_record(
                 .collect();
 
             Ok(Output::Record(output))
+        },
+        RecordCommand::Update(table_name, id) => {
+            let record = api::select_record(id, &table_name, &db_name)?;
+            let updated_data = cli::wizard::update_record_wizard(
+                record.data.to_owned(), 
+                record.columns.iter().map(|col| col.name.to_owned()).collect()
+            )?;
+            api::update_record(updated_data, id, &table_name, &db_name)?;
+            
+            Ok(Output::Message("Record updated".to_string()))
+            
         }
         _ => Ok(Output::Message("Record Command".to_string()))
     }

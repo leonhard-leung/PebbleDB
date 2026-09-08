@@ -29,8 +29,8 @@ pub fn parse(
         // record-specific command TODO: work on this (7/14/2026)
         "add" => add_command(&tokens),
         "read" => select_command(&tokens),
-        // "update" => update_command(),
-        // "delete" => delete_command(),
+        "update" => update_command(&tokens),
+        // "delete" => delete_command(&tokens),
 
         // system specific command
         "exit" => exit_command(&tokens),
@@ -194,8 +194,22 @@ fn select_command(
 }
 
 /// # Update Command
-fn update_command() {
-    // TODO: work on this (7/14/2026)
+fn update_command(
+    tokens: &[&str]
+) -> Result<Command, Error> {
+    // check if the number of tokens is correct
+    validate_token_count(tokens, 3)?;
+
+    // check if keyword token exists
+    let Some(&table_name) = tokens.get(1) else {
+        return Err(Error::NoInput)
+    };
+
+    let Some(&id) = tokens.get(2) else {
+        return Err(Error::NoInput)
+    };
+
+    Ok(Command::Record(RecordCommand::Update(table_name.to_string(), id.parse::<u32>()?)))
 }
 
 /// # Delete Command

@@ -102,3 +102,43 @@ pub fn read_record(
 
     Ok(buffer)
 }
+
+pub fn update_record(
+    updated_data: Vec<u8>,
+    id: u32,
+    table_name: &str,
+    db_name: &str,
+) -> Result<(), Error> {
+    // open .peb file
+    let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
+    let mut file = filesystem::open_file(&path)?;
+    
+    // get table index
+    let table_index = util::get_table_index(&mut file, table_name)?;
+    
+    // calculate offset
+    let record_size = 
+        RECORD_MAGIC_NUMBER_SIZE + 
+            size_of::<u32>() + 
+            updated_data.len();
+    let offset = RECORD_BLOCK_START_OFFSET +
+        (TABLE_BLOCK_SIZE * table_index) as u64 +
+        (record_size * (id - 1) as usize) as u64;
+    
+    // read record magic number'
+    let mut buffer = [0u8; RECORD_MAGIC_NUMBER_SIZE];
+    filesystem::read_at(
+        &mut file,
+        offset,
+        &mut buffer
+    )?;
+    
+    // read payload size
+    let mut buffer = [0u8; size_of::<u32>()];
+    filesystem::read(&mut file, &mut buffer)?;
+    
+    // overwrite payload data
+    filesystem::write(&mut file, &updated_data)?;
+    
+    Ok(())
+}

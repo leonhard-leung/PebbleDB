@@ -3,6 +3,7 @@
 
 use crate::cli;
 use crate::shared::error::Error;
+use crate::shared::error::Error::ParseError;
 
 /// # create_table_wizard
 /// Collects table and column information.
@@ -32,24 +33,24 @@ pub fn create_table_wizard(
         let mut data_type = String::new();
         loop {
             let input = cli::shell::read_input("Column Type: ").to_lowercase();
-            
+
             if cli::syntax::DATA_TYPES.contains(&input.as_str()) {
                 data_type =  input;
                 break;
             }
-            
+
             cli::shell::print_warning(format!("Invalid data type: {}", input));
         }
         data.push(cli::syntax::normalize_data_type(&data_type).unwrap().to_string());
-        
+
         // add another column
         let mut input: String;
         loop {
             input = cli::shell::read_input("Add Another Column? <y/n>: ").to_lowercase();
-            
+
             if input == "y" || input == "n" { break; }
         }
-        
+
         if input == "y" {
             continue;
         }
@@ -68,7 +69,7 @@ pub fn insert_record_wizard(
 ) -> Result<Vec<String>, Error> {
     let mut data: Vec<String> = Vec::new();
 
-    for column in columns {
+    for column in columns.iter() {
         loop {
             let input = cli::shell::read_input(format!("{}: ", column).as_str());
 
@@ -83,4 +84,22 @@ pub fn insert_record_wizard(
     }
 
     Ok(data)
+}
+
+pub fn update_record_wizard(
+    previous_data: Vec<String>,
+    columns: Vec<(String)>,
+) -> Result<Vec<String>, Error> {
+    let mut updated_data = Vec::new();
+
+    for (index, column) in columns.iter().enumerate() {
+        let input = cli::shell::read_input(format!("{}: ", column).as_str());
+
+        if input.is_empty() {
+            updated_data.push(previous_data[index].clone());
+        } else {
+            updated_data.push(input);
+        }
+    }
+    Ok(updated_data)
 }

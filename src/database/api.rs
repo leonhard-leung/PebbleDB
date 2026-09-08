@@ -229,3 +229,50 @@ pub fn select_record(
 
     Ok(serialized.deserialize(&columns)?)
 }
+
+pub fn update_record(
+    updated_data: Vec<String>,
+    id: u32,
+    table_name: &str,
+    db_name: &str,
+) -> Result<(), Error> {
+    let list = storage::table::list_tables(db_name)?;
+
+    if !list.iter().any(|t| t.eq_ignore_ascii_case(table_name)) {
+        return Err(Error::Table(TableError::TableNotFound));
+    }
+
+    let columns = storage::table::get_table_columns(table_name, db_name)?;
+    if updated_data.len() != columns.len() {
+        return Err(Error::Record(RecordError::RecordLengthMismatch))
+    }
+
+    let cols = columns
+        .iter()
+        .map(|(name, id)| Column{ name: name.clone(), data_type: DataType::from_id(*id)})
+        .collect::<Vec<Column>>();
+
+    let mut error_message = String::new();
+
+    for (index, col) in cols.iter().enumerate() {
+        let data_type = &col.data_type;
+
+        let (is_valid, err) = data_type.validate(&updated_data[index]);
+
+        if !is_valid {
+            error_message.push_str(&format!(
+                "  | {}: {}\n",
+                columns[index].0,
+                err
+            ));
+        }
+    }
+    if !error_message.is_empty() {
+        return Err(Error::Record(RecordError::InvalidRecord(error_message)))
+    }
+
+    let record = Record { data: updated_data, columns: cols };
+    let serialized = record.serialize()?;
+
+    storage::record::update_record(serialized.data, id, table_name, db_name)
+}
