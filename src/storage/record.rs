@@ -1,7 +1,7 @@
 //! # Record
 //! Provides operations for selecting, inserting, deleting, and updating records.
 
-use crate::constants::format::{COLUMN_COUNT_SIZE, FILE_EXTENSION, RECORD_BLOCK_START_OFFSET, RECORD_MAGIC_NUMBER, RECORD_MAGIC_NUMBER_SIZE, TABLE_BLOCK_SIZE, TABLE_BLOCK_START_OFFSET, TABLE_MAGIC_NUMBER_SIZE, TABLE_NAME_SIZE};
+use crate::constants::format::{COLUMN_COUNT_SIZE, FILE_EXTENSION, RECORD_BLOCK_START_OFFSET, RECORD_EMPTY_MAGIC_NUMBER, RECORD_MAGIC_NUMBER, RECORD_MAGIC_NUMBER_SIZE, TABLE_BLOCK_SIZE, TABLE_BLOCK_START_OFFSET, TABLE_MAGIC_NUMBER_SIZE, TABLE_NAME_SIZE};
 use crate::database::model::SerializedRecord;
 use crate::shared::error::{Error, RecordError};
 use crate::storage::{filesystem, util};
@@ -125,7 +125,7 @@ pub fn update_record(
         (TABLE_BLOCK_SIZE * table_index) as u64 +
         (record_size * (id - 1) as usize) as u64;
     
-    // read record magic number'
+    // read record magic number
     let mut buffer = [0u8; RECORD_MAGIC_NUMBER_SIZE];
     filesystem::read_at(
         &mut file,
@@ -140,5 +140,48 @@ pub fn update_record(
     // overwrite payload data
     filesystem::write(&mut file, &updated_data)?;
     
+    Ok(())
+}
+
+pub fn delete_record(
+    id: &u32,
+    payload_size: usize,
+    table_name: &str,
+    db_name: &str,
+) -> Result<(), Error> {
+    // open .peb file
+    let path = filesystem::create_file_path(db_name, FILE_EXTENSION);
+    let mut file = filesystem::open_file(&path)?;
+
+    // get table index
+    let table_index = util::get_table_index(&mut file, table_name)?;
+
+    // calculate offset
+    let record_size = RECORD_MAGIC_NUMBER_SIZE +
+        size_of::<u32>() +
+        payload_size;
+    let offset = RECORD_BLOCK_START_OFFSET +
+        (TABLE_BLOCK_SIZE * table_index) as u64 +
+        (record_size * (id - 1) as usize) as u64;
+
+    // update magic number
+    filesystem::write_at(
+        &mut file,
+        offset,
+        RECORD_EMPTY_MAGIC_NUMBER,
+    )?;
+
+    // reset payload size
+    filesystem::write(
+        &mut file,
+        &0u32.to_le_bytes()
+    )?;
+
+    // reset payload data
+    filesystem::write(
+        &mut file,
+        &vec![0u8; payload_size]
+    )?;
+
     Ok(())
 }

@@ -276,3 +276,20 @@ pub fn update_record(
 
     storage::record::update_record(serialized.data, id, table_name, db_name)
 }
+
+pub fn delete_record(
+    id: &u32,
+    table_name: &str,
+    db_name: &str,
+) -> Result<(), Error> {
+    let list = storage::table::list_tables(&db_name)?;
+
+    if !list.iter().any(|t| t.eq_ignore_ascii_case(table_name)) {
+        return Err(Error::Table(TableError::TableNotFound));
+    }
+
+    let columns = storage::table::get_table_columns(table_name, db_name)?;
+    let payload_size = columns.iter().map(| n | DataType::from_id(n.1).size()).sum::<usize>();
+
+    storage::record::delete_record(id, payload_size, table_name, db_name)
+}

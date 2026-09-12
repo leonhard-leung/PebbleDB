@@ -116,6 +116,12 @@ pub fn execute_record(
             
             Ok(Output::Message("Record updated".to_string()))
             
+        },
+        RecordCommand::Delete(table_name, id) => {
+            // TODO: Implement this
+            api::delete_record(&id, &table_name, &db_name)?;
+            
+            Ok(Output::Message("Record deleted".to_string()))
         }
         _ => Ok(Output::Message("Record Command".to_string()))
     }
