@@ -3,6 +3,7 @@
 //! and their columns.
 
 use std::fmt;
+use axum::http::header::TE;
 use crate::shared::error::Error;
 
 // =================================================================================================
@@ -30,19 +31,19 @@ pub enum DataType {
     Text,
 }
 
-const INTEGER: u8 = 0;
-const FLOAT: u8 = 1;
-const BOOLEAN: u8 = 2;
-const TEXT: u8 = 3;
+const INTEGER_ID: u8 = 0;
+const FLOAT_ID: u8 = 1;
+const BOOLEAN_ID: u8 = 2;
+const TEXT_ID: u8 = 3;
 
 impl DataType {
     /// Returns the unique identifier for the data type.
     pub fn id(&self) -> u8 {
         match self {
-            DataType::Integer => INTEGER,
-            DataType::Float => FLOAT,
-            DataType::Boolean => BOOLEAN,
-            DataType::Text => TEXT,
+            DataType::Integer => INTEGER_ID,
+            DataType::Float => FLOAT_ID,
+            DataType::Boolean => BOOLEAN_ID,
+            DataType::Text => TEXT_ID,
         }
     }
 

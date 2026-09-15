@@ -29,7 +29,7 @@ pub const DATABASE_MAGIC_NUMBER_SIZE: usize = DATABASE_MAGIC_NUMBER.len();
 pub const TABLE_COUNT_SIZE: usize = size_of::<u8>();
 
 // Table
-pub const TABLE_BLOCK_SIZE: usize = 8192;
+pub const TABLE_BLOCK_SIZE: usize = 32772;
 pub const TABLE_HEADER_SIZE: usize =
     TABLE_MAGIC_NUMBER_SIZE + TABLE_NAME_SIZE + COLUMN_COUNT_SIZE + ROW_COUNT_SIZE;
 pub const TABLE_MAGIC_NUMBER_SIZE: usize = TABLE_MAGIC_NUMBER.len();
