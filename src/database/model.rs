@@ -2,9 +2,8 @@
 //! Defines the structures and data types used to represent database tables
 //! and their columns.
 
-use std::fmt;
-use axum::http::header::TE;
 use crate::shared::error::Error;
+use std::fmt;
 
 // =================================================================================================
 // Table Model
@@ -95,10 +94,10 @@ impl DataType {
     /// Converts a data type identifier to its corresponding DataType enum value.
     pub fn from_id(id: u8) -> DataType {
         match id {
-            INTEGER => DataType::Integer,
-            FLOAT => DataType::Float,
-            BOOLEAN => DataType::Boolean,
-            TEXT => DataType::Text,
+            INTEGER_ID => DataType::Integer,
+            FLOAT_ID => DataType::Float,
+            BOOLEAN_ID => DataType::Boolean,
+            TEXT_ID => DataType::Text,
             _ => panic!("Invalid data type id"),
         }
     }
