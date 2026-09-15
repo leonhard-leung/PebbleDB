@@ -28,13 +28,14 @@ pub fn parse(
 
         // record-specific command TODO: work on this (7/14/2026)
         "add" => add_command(&tokens),
-        "read" => select_command(&tokens),
+        "select" => select_command(&tokens),
         "update" => update_command(&tokens),
         "delete" => delete_command(&tokens),
 
         // system specific command
         "exit" => exit_command(&tokens),
         "help" => help_command(&tokens),
+        "version" => version_command(&tokens),
 
         // server command
         "server" => server_command(&tokens),
@@ -142,11 +143,19 @@ fn use_command(
 fn describe_command(
     tokens: &[&str]
 ) -> Result<Command, Error> {
-    // check if the number of tokens are correct
-    validate_token_count(tokens, 2)?;
+    // check if the number of tokens is correct
+    validate_token_count(tokens, 3)?;
+
+    let Some(&keyword) = tokens.get(1) else {
+        return Err(Error::NoInput)
+    };
+
+    if keyword.to_lowercase().as_str() != "table" {
+        return Err(Error::UnknownCommand(keyword.to_string()))
+    }
 
     // check if name token exists
-    let Some(&name) = tokens.get(1) else {
+    let Some(&name) = tokens.get(2) else {
         return Err(Error::NoInput)
     };
 
@@ -255,7 +264,13 @@ fn exit_command(tokens: &[&str]) -> Result<Command, Error> {
     Ok(Command::System(SystemCommand::Exit))
 }
 
+/// # Version Command
+fn version_command(tokens: &[&str]) -> Result<Command, Error> {
+    // check if the number of tokens is correct
+    validate_token_count(tokens, 1)?;
 
+    Ok(Command::System(SystemCommand::Version))
+}
 
 // =================================================================================================
 // Server Command

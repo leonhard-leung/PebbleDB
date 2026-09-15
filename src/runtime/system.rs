@@ -1,19 +1,15 @@
+use clap::Error;
+use crate::constants::system::VERSION;
 use crate::shared::command::SystemCommand;
+use crate::shared::output::Output;
 
 /// # Execute
-pub fn execute_system(command: SystemCommand) {
+pub fn execute_system(
+    command: SystemCommand
+) -> Output {
     match command {
-        SystemCommand::Help => show_help(),
-        SystemCommand::Exit => exit_system(),
+        SystemCommand::Help => Output::HelpPage,
+        SystemCommand::Exit => Output::ExitApplication,
+        SystemCommand::Version => Output::Message(format!("v{}", VERSION)),
     }
-}
-
-/// # Show Help
-fn show_help() {
-    println!("Showing help page...")
-}
-
-/// # Exit System
-fn exit_system() {
-    std::process::exit(0);
 }

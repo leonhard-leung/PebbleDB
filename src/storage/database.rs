@@ -2,7 +2,7 @@
 //!
 
 use crate::constants::format::{DATABASE_MAGIC_NUMBER, FILE_EXTENSION, FILE_FORMAT_VERSION, FILE_MAGIC_NUMBER};
-use crate::constants::system::ROOT;
+use crate::constants::system::root;
 use crate::storage::filesystem;
 use crate::shared::error::Error;
 use std::fs;
@@ -17,7 +17,7 @@ use crate::storage::filesystem::list_files;
 
 /// # List Databases
 pub fn list_databases() -> Result<Vec<String>, Error> {
-    let mut databases = list_files(Path::new(&ROOT))?;
+    let mut databases = list_files(Path::new(&root()))?;
 
     databases.retain(|file| file.ends_with(FILE_EXTENSION));
 

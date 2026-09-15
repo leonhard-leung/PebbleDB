@@ -35,6 +35,7 @@ pub enum RecordCommand {
 pub enum SystemCommand {
     Help,
     Exit,
+    Version,
 }
 
 #[derive(Debug)]

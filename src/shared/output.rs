@@ -4,4 +4,6 @@ pub enum Output {
     TableMetadata(Vec<String>),
     Record(Vec<(String, String)>),
     Message(String),
+    ExitApplication,
+    HelpPage,
 }

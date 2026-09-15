@@ -5,6 +5,7 @@ use crate::shared::output::Output;
 use std::io;
 pub use std::io::BufRead;
 use std::io::Write;
+use crate::cli::help::show_help;
 
 pub fn cmd_prompt(session: &Session) -> String {
     let prompt = match &session.current_database {
@@ -57,6 +58,10 @@ pub fn print_out(out: Output) {
             }
         }
         Output::Message(msg) => println!("{GREEN}{msg}{RESET}"),
+        Output::HelpPage => println!("{}", show_help()),
+        Output::ExitApplication => {
+            println!("{GREEN}Exiting...{RESET}");
+        }
     }
 }
 

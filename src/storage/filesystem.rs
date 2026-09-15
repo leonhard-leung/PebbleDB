@@ -1,7 +1,7 @@
 //! # Filesystem
 //! Provides low-level file and I/O operations for the database storage layer.
 
-use crate::constants::system::ROOT;
+use crate::constants::system::root;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 /// Creates a `PathBuf` using the given filename and file extension, attached to the `ROOT`
 /// constant.
 pub fn create_file_path(filename: &str, file_extension: &str) -> PathBuf {
-    let mut path = PathBuf::from(ROOT).join(filename);
+    let mut path = PathBuf::from(root()).join(filename);
     path.set_extension(file_extension);
     path
 }
