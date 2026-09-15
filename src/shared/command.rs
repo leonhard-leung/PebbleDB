@@ -4,6 +4,7 @@ pub enum Command {
     Table(TableCommand),
     Record(RecordCommand),
     System(SystemCommand),
+    Server(ServerCommand),
 }
 
 #[derive(Debug)]
@@ -34,4 +35,11 @@ pub enum RecordCommand {
 pub enum SystemCommand {
     Help,
     Exit,
+}
+
+#[derive(Debug)]
+pub enum ServerCommand {
+    Start,
+    Stop,
+    Status,
 }

@@ -1,5 +1,6 @@
-use crate::runtime::session::Session;
-use crate::runtime::system;
+use crate::runtime::session::{Session, ServerState};
+use crate::runtime::system::execute_system;
+use crate::server::executor::execute_server;
 use application::executor;
 use shared::command::Command;
 use shared::output::Output;
@@ -12,12 +13,18 @@ mod runtime;
 mod shared;
 mod constants;
 pub mod application;
+pub mod server;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     cli::shell::print_out(Output::Message("Welcome to PebbleDB!".to_string()));
-    
+
     let mut session = Session {
         current_database: None,
+        server: ServerState {
+            running: false,
+            shutdown: None,
+        }
     };
 
     loop {
@@ -54,7 +61,13 @@ fn main() {
                     Err(err) => cli::shell::print_err(err),
                 }
             },
-            Command::System(cmd) => system::execute(cmd),
+            Command::System(cmd) => execute_system(cmd),
+            Command::Server(cmd) => {
+                match execute_server(cmd, &mut session) {
+                    Ok(output) => cli::shell::print_out(output),
+                    Err(err) => cli::shell::print_err(err),
+                }
+            },
         }
     }
 }

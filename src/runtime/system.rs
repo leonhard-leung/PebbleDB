@@ -1,7 +1,7 @@
 use crate::shared::command::SystemCommand;
 
 /// # Execute
-pub fn execute(command: SystemCommand) {
+pub fn execute_system(command: SystemCommand) {
     match command {
         SystemCommand::Help => show_help(),
         SystemCommand::Exit => exit_system(),

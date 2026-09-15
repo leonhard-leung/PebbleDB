@@ -183,5 +183,14 @@ pub fn delete_record(
         &vec![0u8; payload_size]
     )?;
 
+    // update row count
+    let row_count = util::read_row_count(&mut file, table_index)?;
+    let offset = TABLE_BLOCK_START_OFFSET +
+        (TABLE_BLOCK_SIZE * table_index) as u64 +
+        TABLE_MAGIC_NUMBER_SIZE as u64 +
+        TABLE_NAME_SIZE as u64 +
+        COLUMN_COUNT_SIZE as u64;
+    filesystem::write_at(&mut file, offset, &(row_count - 1u32).to_le_bytes())?;
+
     Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::parser::grammar::{Target, TargetForm};
-use crate::shared::command::{Command, DatabaseCommand, RecordCommand, SystemCommand, TableCommand};
+use crate::shared::command::{Command, DatabaseCommand, TableCommand, RecordCommand, SystemCommand, ServerCommand};
 use crate::shared::error::Error;
 
 /// # parse
@@ -35,6 +35,9 @@ pub fn parse(
         // system specific command
         "exit" => exit_command(&tokens),
         "help" => help_command(&tokens),
+
+        // server command
+        "server" => server_command(&tokens),
 
         _ => Err(Error::UnknownCommand(command.to_string())),
     }
@@ -112,7 +115,7 @@ fn drop_command(
 }
 
 // =================================================================================================
-// Database Specific Commands
+// Database Commands
 // =================================================================================================
 
 /// # Use Command
@@ -132,7 +135,7 @@ fn use_command(
 }
 
 // =================================================================================================
-// Table Specific Commands
+// Table Commands
 // =================================================================================================
 
 /// # Describe Command
@@ -152,7 +155,7 @@ fn describe_command(
 }
 
 // =================================================================================================
-// Record Specific Commands
+// Record Commands
 // =================================================================================================
 
 /// # Add Command
@@ -233,12 +236,12 @@ fn delete_command(
 }
 
 // =================================================================================================
-// System Specific Commands
+// System Commands
 // =================================================================================================
 
 /// # Help Command
 fn help_command(tokens: &[&str]) -> Result<Command, Error> {
-    // check if the number of tokens are correct
+    // check if the number of tokens is correct
     validate_token_count(tokens, 1)?;
 
     Ok(Command::System(SystemCommand::Help))
@@ -246,10 +249,35 @@ fn help_command(tokens: &[&str]) -> Result<Command, Error> {
 
 /// # Exit Command
 fn exit_command(tokens: &[&str]) -> Result<Command, Error> {
-    // check if the number of tokens are correct
+    // check if the number of tokens is correct
     validate_token_count(tokens, 1)?;
 
     Ok(Command::System(SystemCommand::Exit))
+}
+
+
+
+// =================================================================================================
+// Server Command
+// =================================================================================================
+
+/// # Server Command
+fn server_command(tokens: &[&str]) -> Result<Command, Error> {
+    // check if the number of tokens is correct
+    validate_token_count(tokens, 2)?;
+
+    let Some(&keyword) = tokens.get(1) else {
+        return Err(Error::NoInput)
+    };
+
+    let command = match keyword.to_lowercase().as_str() {
+        "start" => ServerCommand::Start,
+        "stop" => ServerCommand::Stop,
+        "status" => ServerCommand::Status,
+        _ => return Err(Error::UnknownCommand(keyword.to_string())),
+    };
+
+    Ok(Command::Server(command))
 }
 
 // =================================================================================================

@@ -4,6 +4,7 @@
 
 use std::fmt;
 use crate::shared::error::Error;
+
 // =================================================================================================
 // Table Model
 // =================================================================================================
@@ -146,7 +147,7 @@ impl Record {
         let mut serialized = Vec::new();
 
         for (entry, column) in self.data.iter().zip(self.columns.iter()) {
-            
+
             match column.data_type {
                 DataType::Integer => {
                     let value = entry.parse::<i32>()?;
@@ -178,6 +179,14 @@ impl Record {
             payload_size
         })
     }
+
+    pub fn to_pairs(&self) -> Vec<(String, String)> {
+        self.data
+            .iter()
+            .zip(self.columns.iter())
+            .map(|(entry, column)| (column.name.clone(), entry.clone()))
+            .collect()
+    }
 }
 
 impl SerializedRecord {
@@ -191,7 +200,7 @@ impl SerializedRecord {
 
         for (column_name, data_type_id) in columns.iter() {
             let data_type = DataType::from_id(*data_type_id);
-            
+
             cols.push(Column{
                 name: column_name.to_owned(),
                 data_type: DataType::from_id(*data_type_id)
@@ -221,13 +230,13 @@ impl SerializedRecord {
                 DataType::Text => {
                     let bytes = &self.data[offset..offset + DataType::Text.size()];
                     let value = std::str::from_utf8(&bytes)?.trim_end_matches('\0');
-                    
+
                     deserialized.push(value.to_string());
                     offset += DataType::Text.size();
                 },
             }
         }
-        Ok(Record { 
+        Ok(Record {
             data: deserialized,
             columns: cols
         })
