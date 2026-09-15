@@ -1,0 +1,46 @@
+#[derive(Debug)]
+pub enum Command {
+    Database(DatabaseCommand),
+    Table(TableCommand),
+    Record(RecordCommand),
+    System(SystemCommand),
+    Server(ServerCommand),
+}
+
+#[derive(Debug)]
+pub enum DatabaseCommand {
+    List,
+    Create(String),
+    Drop(String),
+    Use(String),
+}
+
+#[derive(Debug)]
+pub enum TableCommand {
+    List,
+    Create(String),
+    Drop(String),
+    Describe(String),
+}
+
+#[derive(Debug)]
+pub enum RecordCommand {
+    Select(String, u32),
+    Insert(String),
+    Update(String, u32),
+    Delete(String, u32),
+}
+
+#[derive(Debug)]
+pub enum SystemCommand {
+    Help,
+    Exit,
+    Version,
+}
+
+#[derive(Debug)]
+pub enum ServerCommand {
+    Start,
+    Stop,
+    Status,
+}
